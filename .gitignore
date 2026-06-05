@@ -24,3 +24,6 @@ build/
 # Misc
 .env
 .env.local
+
+# WeChat DevTools private config (per-machine, not for VCS)
+project.private.config.json
