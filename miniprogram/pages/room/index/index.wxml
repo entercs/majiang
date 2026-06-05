@@ -1,0 +1,59 @@
+<view class="room">
+  <view class="code-bar">
+    <text class="code-label">房间号</text>
+    <text class="code-value" bind:tap="onCopyCode">{{roomCode}}</text>
+    <text class="share-btn" bind:tap="onShareRoom">分享</text>
+  </view>
+
+  <!-- 4 家横排（按 seatIndex 排序，人数不限） -->
+  <view class="players-row">
+    <block wx:for="{{playersRow}}" wx:key="_id">
+      <view class="player-card {{item._id === currentPlayerId ? 'self' : ''}}" bind:tap="onTapPlayer" data-id="{{item._id}}" data-self="{{item._id === currentPlayerId}}">
+        <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+        <text class="nick">{{item.nickname}}</text>
+        <text class="score">{{item.totalScore}}</text>
+      </view>
+    </block>
+  </view>
+
+  <!-- 排行榜（可滚动，超出视口高度时滚动） -->
+  <view class="rank-section">
+    <view class="rank-title">排行榜</view>
+    <scroll-view class="rank-scroll" scroll-y>
+      <view class="rank-list">
+        <block wx:for="{{rankList}}" wx:key="_id">
+          <view class="rank-row {{index === 0 ? 'first' : ''}}">
+            <text class="rank-no">{{index + 1}}</text>
+            <image class="rank-avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+            <text class="rank-nick">{{item.nickname}}</text>
+            <text class="rank-delta {{item.lastDelta > 0 ? 'pos' : item.lastDelta < 0 ? 'neg' : ''}}" wx:if="{{item.lastDelta !== 0}}">
+              {{item.lastDelta > 0 ? '+' : ''}}{{item.lastDelta}}
+            </text>
+            <text class="rank-score">{{item.totalScore}} 分</text>
+          </view>
+        </block>
+        <view wx:if="{{rankList.length === 0}}" class="empty-rank">还没有人记分，点上方头像开始</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部操作（按身份显示） -->
+  <view class="actions {{isOwner ? 'actions-3' : 'actions-2'}}">
+    <view class="action-btn auto" bind:tap="onAutoScore">辅助算分</view>
+    <view class="action-btn history" bind:tap="onShowHistory">历史记录</view>
+    <view wx:if="{{isOwner}}" class="action-btn finish" bind:tap="onFinishRoom">结束本局</view>
+  </view>
+
+  <!-- 同步状态条 -->
+  <view class="sync-bar" wx:if="{{syncStatus !== 'connected'}}">
+    <text>{{syncText}}</text>
+  </view>
+
+  <!-- 加分弹窗组件 -->
+  <score-popup
+    wx:if="{{popupVisible}}"
+    target-nick="{{popupTarget.nickname}}"
+    bind:confirm="onPopupConfirm"
+    bind:cancel="onPopupCancel"
+  ></score-popup>
+</view>

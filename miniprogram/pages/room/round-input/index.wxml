@@ -1,0 +1,73 @@
+<view class="round-input">
+  <view class="group">
+    <view class="group-title">1. 选择胡牌者</view>
+    <view class="player-grid">
+      <block wx:for="{{players}}" wx:key="_id">
+        <view class="player-card {{winnerId === item._id ? 'selected' : ''}}" bind:tap="onSelectWinner" data-id="{{item._id}}">
+          <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex}}.png"></image>
+          <text class="nick">{{item.nickname}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-title">2. 选择胡牌类型</view>
+    <radio-group bindchange="onChangeWinType" value="{{winType}}">
+      <view class="radio-row" bindtap="onSelectType" data-type="zimo">
+        <text>自摸</text>
+        <radio value="zimo" checked="{{winType === 'zimo'}}" color="#1aad19" />
+      </view>
+      <view class="radio-row" bindtap="onSelectType" data-type="dianpao" wx:if="{{rule.allowDianpao}}">
+        <text>点炮</text>
+        <radio value="dianpao" checked="{{winType === 'dianpao'}}" color="#1aad19" />
+      </view>
+      <view class="radio-row" bindtap="onSelectType" data-type="gangshanghua">
+        <text>杠上花</text>
+        <radio value="gangshanghua" checked="{{winType === 'gangshanghua'}}" color="#1aad19" />
+      </view>
+      <view class="radio-row" bindtap="onSelectType" data-type="qiangganghu" wx:if="{{rule.allowDianpao}}">
+        <text>抢杠胡</text>
+        <radio value="qiangganghu" checked="{{winType === 'qiangganghu'}}" color="#1aad19" />
+      </view>
+    </radio-group>
+  </view>
+
+  <view class="group" wx:if="{{needsLoser}}">
+    <view class="group-title">3. 选择点炮者</view>
+    <view class="player-grid">
+      <block wx:for="{{otherPlayers}}" wx:key="_id">
+        <view class="player-card {{loserId === item._id ? 'selected' : ''}}" bind:tap="onSelectLoser" data-id="{{item._id}}">
+          <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex}}.png"></image>
+          <text class="nick">{{item.nickname}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-title">4. 番数</view>
+    <view class="field-row">
+      <text class="field-label">番数</text>
+      <input class="field-input" type="number" value="{{fan}}" bindinput="onChangeFan" />
+    </view>
+  </view>
+
+  <view class="group" wx:if="{{canAddGang}}">
+    <view class="group-title">5. 杠事件</view>
+    <block wx:for="{{gangEvents}}" wx:key="index">
+      <view class="gang-row">
+        <text>类型：{{item.type}}</text>
+        <text>玩家：{{getPlayerName(item.playerId)}}</text>
+        <button class="btn-mini" size="mini" bindtap="onRemoveGang" data-index="{{index}}">删除</button>
+      </view>
+    </block>
+    <view class="add-gang-row">
+      <button class="btn-mini" bindtap="onAddGang">添加杠</button>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn primary block" bindtap="onSubmit">提交本局</button>
+  </view>
+</view>

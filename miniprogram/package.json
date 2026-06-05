@@ -1,0 +1,8 @@
+{
+  "name": "majiang-miniprogram",
+  "version": "1.0.0",
+  "description": "麻将计分小程序",
+  "scripts": {
+    "build:npm": "miniprogram-ci npm"
+  }
+}

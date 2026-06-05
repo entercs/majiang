@@ -1,0 +1,8 @@
+.score-table { background: #fff; border-radius: 12rpx; padding: 16rpx; }
+.row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.row:last-child { border-bottom: none; }
+.avatar { width: 64rpx; height: 64rpx; border-radius: 50%; }
+.nick { flex: 1; margin-left: 16rpx; font-size: 28rpx; }
+.score { font-size: 30rpx; font-weight: 600; }
+.score.positive { color: #d33; }
+.score.negative { color: #1aad19; }

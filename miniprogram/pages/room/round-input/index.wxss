@@ -1,0 +1,21 @@
+.round-input { padding-bottom: 200rpx; }
+.group { background: #fff; margin: 24rpx; border-radius: 12rpx; overflow: hidden; }
+.group-title { font-size: 26rpx; color: #7A7E83; padding: 16rpx 24rpx; background: #f8f8f8; }
+.player-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16rpx; padding: 24rpx; }
+.player-card { display: flex; flex-direction: column; align-items: center; padding: 16rpx; border: 2rpx solid #e0e0e0; border-radius: 12rpx; }
+.player-card.selected { border-color: #1aad19; background: #f0f8e8; }
+.avatar { width: 80rpx; height: 80rpx; border-radius: 50%; }
+.nick { margin-top: 8rpx; font-size: 24rpx; }
+.radio-row { display: flex; justify-content: space-between; align-items: center; padding: 24rpx; border-bottom: 1rpx solid #f0f0f0; }
+.radio-row:last-child { border-bottom: none; }
+.field-row { display: flex; align-items: center; justify-content: space-between; padding: 24rpx; }
+.field-label { font-size: 30rpx; color: #333; }
+.field-input { flex: 1; text-align: right; font-size: 30rpx; padding: 8rpx 16rpx; }
+.gang-row { display: flex; gap: 24rpx; align-items: center; padding: 16rpx 24rpx; border-bottom: 1rpx solid #f0f0f0; }
+.add-gang-row { padding: 16rpx 24rpx; }
+.btn-mini { padding: 8rpx 24rpx; background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 6rpx; font-size: 24rpx; line-height: 1.4; }
+.btn-mini::after { border: none; }
+.footer { padding: 40rpx 24rpx; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; }
+.btn { width: 100%; height: 88rpx; line-height: 88rpx; font-size: 32rpx; border-radius: 8rpx; margin: 0; }
+.btn.primary { background: #1aad19; color: #fff; border: none; }
+.btn.primary::after { border: none; }

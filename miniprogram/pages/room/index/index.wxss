@@ -1,0 +1,40 @@
+.room { padding: 24rpx; padding-bottom: 200rpx; min-height: 100vh; box-sizing: border-box; background: #f5f5f5; display: flex; flex-direction: column; }
+
+.code-bar { display: flex; align-items: center; gap: 16rpx; padding: 24rpx; background: #fff; border-radius: 12rpx; }
+.code-label { font-size: 28rpx; color: #7A7E83; }
+.code-value { font-size: 40rpx; font-weight: 700; color: #1aad19; flex: 1; letter-spacing: 4rpx; }
+.share-btn { font-size: 26rpx; color: #1aad19; padding: 8rpx 20rpx; border: 1rpx solid #1aad19; border-radius: 6rpx; }
+.share-btn:active { background: #1aad19; color: #fff; }
+
+.players-row { display: flex; gap: 12rpx; margin-top: 24rpx; padding: 16rpx; background: #fff; border-radius: 12rpx; overflow-x: auto; }
+.player-card { flex: 0 0 130rpx; display: flex; flex-direction: column; align-items: center; padding: 12rpx 0; border: 2rpx solid transparent; border-radius: 12rpx; }
+.player-card.self { border-color: #1aad19; background: #f0f8e8; }
+.player-card:active { background: #f5f5f5; }
+.avatar { width: 72rpx; height: 72rpx; border-radius: 50%; }
+.nick { font-size: 22rpx; color: #333; margin-top: 8rpx; max-width: 110rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score { font-size: 26rpx; font-weight: 700; margin-top: 4rpx; color: #333; }
+
+.rank-section { margin-top: 24rpx; background: #fff; border-radius: 12rpx; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.rank-title { font-size: 30rpx; font-weight: 600; color: #333; padding: 24rpx; border-bottom: 1rpx solid #f0f0f0; flex-shrink: 0; }
+.rank-scroll { flex: 1; min-height: 0; }
+.rank-list { }
+.rank-row { display: flex; align-items: center; min-height: 96rpx; padding: 0 24rpx; border-bottom: 1rpx solid #f0f0f0; overflow: hidden; box-sizing: border-box; }
+.rank-row:last-child { border-bottom: none; }
+.rank-row.first { background: #fff8dc; }
+.rank-no { font-size: 32rpx; font-weight: 700; color: #1aad19; flex-shrink: 0; width: 50rpx; }
+.rank-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; margin-right: 16rpx; flex-shrink: 0; }
+.rank-nick { font-size: 28rpx; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; max-width: 200rpx; }
+.rank-delta { font-size: 28rpx; font-weight: 600; color: #1aad19; margin-left: 12rpx; flex-shrink: 0; }
+.rank-delta.pos { color: #07c160; }
+.rank-delta.neg { color: #fa5151; }
+.rank-score { font-size: 28rpx; font-weight: 600; color: #333; margin-left: auto; flex-shrink: 0; }
+.empty-rank { text-align: center; color: #999; padding: 40rpx; font-size: 26rpx; }
+
+.actions { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 16rpx; padding: 24rpx; background: #fff; border-top: 1rpx solid #f0f0f0; }
+.action-btn { flex: 1; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 12rpx; font-size: 30rpx; }
+.action-btn.auto { background: #1aad19; color: #fff; }
+.action-btn.history { background: #f5f5f5; color: #333; border: 1rpx solid #e0e0e0; }
+.action-btn.finish { background: #fff; color: #d33; border: 1rpx solid #d33; }
+.action-btn:active { opacity: 0.8; }
+
+.sync-bar { padding: 12rpx; background: #fff3cd; color: #856404; text-align: center; font-size: 24rpx; }

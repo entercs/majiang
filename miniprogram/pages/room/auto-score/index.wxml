@@ -1,0 +1,73 @@
+<view class="auto-score">
+  <view class="section">
+    <view class="section-title">1. 选择胡牌者</view>
+    <view class="players-row">
+      <block wx:for="{{players}}" wx:key="_id">
+        <view class="player-card {{winnerId === item._id ? 'selected' : ''}}" bind:tap="onSelectWinner" data-id="{{item._id}}">
+          <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+          <text class="nick">{{item.nickname}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">2. 选择胡牌类型</view>
+    <view class="types">
+      <view class="type-item {{winType === 'zimo' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="zimo">
+        <text>自摸</text>
+      </view>
+      <view class="type-item {{winType === 'dianpao' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="dianpao">
+        <text>点炮</text>
+      </view>
+      <view class="type-item {{winType === 'gangshanghua' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="gangshanghua">
+        <text>杠上花</text>
+      </view>
+      <view class="type-item {{winType === 'qiangganghu' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="qiangganghu">
+        <text>抢杠胡</text>
+      </view>
+      <view class="type-item {{winType === 'haidilao' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="haidilao">
+        <text>海底捞月</text>
+      </view>
+      <view class="type-item {{winType === 'haidipao' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="haidipao">
+        <text>海底炮</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{needsLoser}}">
+    <view class="section-title">3. 选择点炮者</view>
+    <view class="players-row">
+      <block wx:for="{{otherPlayers}}" wx:key="_id">
+        <view class="player-card {{loserId === item._id ? 'selected' : ''}}" bind:tap="onSelectLoser" data-id="{{item._id}}">
+          <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+          <text class="nick">{{item.nickname}}</text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">{{needsLoser ? 4 : 3}}. 番数</view>
+    <input class="fan-input" type="number" value="{{fan}}" bindinput="onChangeFan" placeholder="输入番数（默认 1）" />
+  </view>
+
+  <view class="section" wx:if="{{preview.length > 0}}">
+    <view class="section-title">建议加减分</view>
+    <view class="preview">
+      <block wx:for="{{preview}}" wx:key="_id">
+        <view class="preview-row">
+          <text class="preview-rank">{{index + 1}}. {{item.nickname}}</text>
+          <text class="preview-score {{item.delta > 0 ? 'positive' : item.delta < 0 ? 'negative' : ''}}">
+            {{item.delta > 0 ? '+' : ''}}{{item.delta}} 分
+          </text>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="footer">
+    <view class="btn default" bind:tap="onCalculate">{{preview.length > 0 ? '重新计算' : '计算'}}</view>
+    <view class="btn primary {{preview.length === 0 ? 'disabled' : ''}}" bind:tap="onApply">应用到房间</view>
+  </view>
+</view>

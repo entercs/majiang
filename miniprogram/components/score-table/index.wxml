@@ -1,0 +1,11 @@
+<view class="score-table">
+  <block wx:for="{{players}}" wx:key="_id">
+    <view class="row">
+      <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex}}.png"></image>
+      <text class="nick">{{item.nickname}}</text>
+      <text class="score {{item.score > 0 ? 'positive' : item.score < 0 ? 'negative' : ''}}">
+        {{item.score > 0 ? '+' : ''}}{{item.score}} 分
+      </text>
+    </view>
+  </block>
+</view>

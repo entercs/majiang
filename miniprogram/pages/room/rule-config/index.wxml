@@ -1,0 +1,61 @@
+<view class="rule-config">
+  <view class="group">
+    <view class="group-title">基础</view>
+    <view class="field-row">
+      <text class="field-label">底分</text>
+      <input class="field-input" type="number" value="{{rule.baseScore}}" data-field="baseScore" bindinput="onChange" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">封顶番</text>
+      <input class="field-input" type="number" value="{{rule.maxFan}}" placeholder="0=无限" data-field="maxFan" bindinput="onChange" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">允许点炮</text>
+      <switch checked="{{rule.allowDianpao}}" bindchange="onToggleDianpao" color="#1aad19" />
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-title">胡牌倍数</view>
+    <view class="field-row">
+      <text class="field-label">自摸倍数</text>
+      <input class="field-input" type="number" value="{{rule.zimoMul}}" data-field="zimoMul" bindinput="onChange" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">点炮倍数</text>
+      <input class="field-input" type="number" value="{{rule.dianpaoMul}}" data-field="dianpaoMul" bindinput="onChange" />
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-title">杠分</view>
+    <view class="field-row">
+      <text class="field-label">明杠</text>
+      <input class="field-input" type="number" value="{{rule.mingGangScore}}" data-field="mingGangScore" bindinput="onChange" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">暗杠</text>
+      <input class="field-input" type="number" value="{{rule.anGangScore}}" data-field="anGangScore" bindinput="onChange" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">补杠</text>
+      <input class="field-input" type="number" value="{{rule.bugangScore}}" data-field="bugangScore" bindinput="onChange" />
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="group-title">其他</view>
+    <view class="field-row">
+      <text class="field-label">买马数</text>
+      <input class="field-input" type="number" value="{{rule.maCount}}" placeholder="0=无" data-field="maCount" bindinput="onChange" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">庄家倍数</text>
+      <input class="field-input" type="number" value="{{rule.dealerMul}}" data-field="dealerMul" bindinput="onChange" />
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn primary block" bindtap="onSave">保存</button>
+  </view>
+</view>

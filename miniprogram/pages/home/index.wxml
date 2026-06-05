@@ -1,0 +1,29 @@
+<view class="home">
+  <view class="hero">
+    <text class="title">胡了么</text>
+  </view>
+
+  <view class="profile" bindtap="onEditNickname">
+    <image class="avatar" src="/images/avatars/avatar-{{avatarIndex || 0}}.png" mode="aspectFit"></image>
+    <text class="nick">{{nickname || '点击设置昵称'}}</text>
+  </view>
+
+  <view class="actions">
+    <button class="btn primary" bindtap="onCreateRoom">创建牌局</button>
+    <button class="btn default" bindtap="onJoinRoom">加入牌局</button>
+  </view>
+
+  <view class="recent" wx:if="{{recentRooms.length > 0}}">
+    <view class="recent-title">最近玩过</view>
+    <view class="recent-list">
+      <view class="recent-item" wx:for="{{recentRooms}}" wx:key="roomId" bindtap="onTapRecent" data-roomcode="{{item.roomCode}}" data-roomid="{{item.roomId}}">
+        <text class="recent-code">{{item.roomCode}}</text>
+        <text class="recent-time">{{item.timeText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="help-row">
+    <text class="help-link" bindtap="onShowHelp">帮助</text>
+  </view>
+</view>

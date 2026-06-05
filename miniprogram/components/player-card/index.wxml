@@ -1,0 +1,8 @@
+<view class="player-card {{selected ? 'selected' : ''}}">
+  <image class="avatar" src="/images/avatars/avatar-{{player.avatarIndex}}.png"></image>
+  <view class="info">
+    <text class="nick">{{player.nickname}}</text>
+    <text class="seat">座位 {{player.seatIndex}}</text>
+  </view>
+  <text wx:if="{{showScore}}" class="score">{{score}} 分</text>
+</view>
