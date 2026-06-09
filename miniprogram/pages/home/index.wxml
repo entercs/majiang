@@ -13,12 +13,24 @@
     <button class="btn default" bindtap="onJoinRoom">加入牌局</button>
   </view>
 
-  <view class="recent" wx:if="{{recentRooms.length > 0}}">
-    <view class="recent-title">最近玩过</view>
-    <view class="recent-list">
-      <view class="recent-item" wx:for="{{recentRooms}}" wx:key="roomId" bindtap="onTapRecent" data-roomcode="{{item.roomCode}}" data-roomid="{{item.roomId}}">
-        <text class="recent-code">{{item.roomCode}}</text>
-        <text class="recent-time">{{item.timeText}}</text>
+  <view class="my-rooms" wx:if="{{myRooms.active.length > 0}}">
+    <view class="section-title">进行中</view>
+    <view class="room-list">
+      <view class="room-item active" wx:for="{{myRooms.active}}" wx:key="roomId"
+            bind:tap="onTapActive" data-roomid="{{item.roomId}}" data-roomcode="{{item.roomCode}}">
+        <text class="code">{{item.roomCode}}</text>
+        <text class="meta">{{item.onlineCount}} 人在线</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="my-rooms" wx:if="{{myRooms.finished.length > 0}}">
+    <view class="section-title">已结束</view>
+    <view class="room-list">
+      <view class="room-item finished" wx:for="{{myRooms.finished}}" wx:key="roomId"
+            bind:tap="onTapFinished" data-roomid="{{item.roomId}}">
+        <text class="code">{{item.roomCode}}</text>
+        <text class="meta">{{item.closedAtText}}</text>
       </view>
     </view>
   </view>
