@@ -55,7 +55,10 @@ exports.main = async (event, context) => {
         seatIndex: 0, // dealer seat
         isOwner: true,
         openid: openid || null,
+        clientId: clientId || null,
         joinedAt: Date.now(),
+        isOnline: true,
+        lastSeenAt: Date.now(),
       }
     });
 
