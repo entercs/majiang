@@ -81,6 +81,10 @@ exports.main = async (event) => {
 
     const winner = players.find(p => p._id === w);
     if (!winner) return { code: 'INVALID_INPUT', message: '胡牌者不在房间中' };
+    // 辅助算分：提交者必须是赢家本人（每人只能控制自己的记分）
+    if (winner.clientId !== clientId) {
+      return { code: 'FORBIDDEN', message: '只有赢家本人可以提交本局' };
+    }
     if (input.loserId) {
       const loser = players.find(p => p._id === input.loserId);
       if (!loser) return { code: 'INVALID_INPUT', message: '点炮者不在房间中' };
