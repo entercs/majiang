@@ -1,0 +1,59 @@
+.popup-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.popup-panel {
+  width: 80%;
+  max-width: 600rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 48rpx 32rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+}
+
+.nick {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.score {
+  font-size: 28rpx;
+  color: #7A7E83;
+  margin-bottom: 24rpx;
+}
+
+.popup-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  margin-top: 12rpx;
+}
+
+.popup-btn.default {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.popup-btn.danger {
+  background: #fff;
+  color: #d33;
+  border: 1rpx solid #d33;
+}

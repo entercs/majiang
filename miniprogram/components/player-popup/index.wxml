@@ -1,0 +1,11 @@
+<view class="popup-mask" bind:tap="onMaskTap">
+  <view class="popup-panel" catch:tap>
+    <image class="avatar" src="/images/avatars/avatar-{{avatarIndex || 0}}.png" mode="aspectFit"></image>
+    <text class="nick">{{nickname}}</text>
+    <text class="score">{{totalScore}} 分</text>
+
+    <button class="popup-btn default" bind:tap="onEditNickname">修改昵称</button>
+    <button class="popup-btn default" bind:tap="onLeaveRoom">退出房间</button>
+    <button class="popup-btn danger" bind:tap="onFinishRoom">结束本局</button>
+  </view>
+</view>
