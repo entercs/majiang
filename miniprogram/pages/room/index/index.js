@@ -17,6 +17,8 @@ Page({
     syncText: '同步中...',
     popupVisible: false,
     popupTarget: null,
+    selfPopupVisible: false,
+    selfPopupTarget: null,
   },
 
   onLoad(query) {
@@ -137,7 +139,7 @@ Page({
     });
   },
 
-  // 点玩家头像：自己→改昵称；别人→加分弹窗
+  // 点玩家头像/昵称（玩家行 + 排行榜都走这里）：自己→self 弹窗；别人→加分弹窗
   onTapPlayer(e) {
     const id = e.currentTarget.dataset.id;
     const isSelf = e.currentTarget.dataset.self;
@@ -145,7 +147,11 @@ Page({
     if (!player) return;
 
     if (isSelf) {
-      this._showEditNicknameModal();
+      const totals = roomStore.getTotalScores();
+      this.setData({
+        selfPopupVisible: true,
+        selfPopupTarget: { ...player, totalScore: totals[id] || 0 },
+      });
     } else {
       this.setData({
         popupVisible: true,
@@ -269,10 +275,15 @@ Page({
   onFinishRoom() {
     wx.showModal({
       title: '结束本局',
-      content: '结束后无法再记录分数，确定吗？',
+      content: '结束后所有人都无法再记录分数，且无法重新开启。确定要结束吗？',
+      confirmText: '结束本局',
+      confirmColor: '#d33',
       success: (res) => {
         if (res.confirm) {
-          roomService.finishRoom(roomStore.roomId).then((r) => {
+          roomService.finishRoom({
+            roomId: roomStore.roomId,
+            clientId: appStore.clientId,
+          }).then((r) => {
             if (r.code === 'OK') {
               wx.redirectTo({ url: '/pages/room/summary/index' });
             } else {
@@ -282,5 +293,46 @@ Page({
         }
       },
     });
+  },
+
+  // ====== self 弹窗回调 ======
+
+  onSelfPopupClose() {
+    this.setData({ selfPopupVisible: false });
+  },
+
+  onSelfPopupEditNickname() {
+    this.setData({ selfPopupVisible: false });
+    this._showEditNicknameModal();
+  },
+
+  onSelfPopupLeaveRoom() {
+    this.setData({ selfPopupVisible: false });
+    wx.showModal({
+      title: '退出房间',
+      content: '确定要退出吗？你可以稍后从首页「进行中」回到房间。',
+      success: (modal) => {
+        if (modal.confirm) {
+          const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
+          if (!me) return;
+          roomService.leaveRoom({
+            roomId: roomStore.roomId,
+            playerId: me._id,
+            clientId: appStore.clientId,
+          }).then((res) => {
+            if (res.code === 'OK') {
+              wx.reLaunch({ url: '/pages/home/index' });
+            } else {
+              handleError(res, this);
+            }
+          }).catch((err) => handleError(err, this));
+        }
+      },
+    });
+  },
+
+  onSelfPopupFinishRoom() {
+    this.setData({ selfPopupVisible: false });
+    this.onFinishRoom();
   },
 });

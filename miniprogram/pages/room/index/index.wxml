@@ -22,7 +22,7 @@
     <scroll-view class="rank-scroll" scroll-y>
       <view class="rank-list">
         <block wx:for="{{rankList}}" wx:key="_id">
-          <view class="rank-row {{index === 0 ? 'first' : ''}}">
+          <view class="rank-row {{index === 0 ? 'first' : ''}}" bind:tap="onTapPlayer" data-id="{{item._id}}" data-self="{{item._id === currentPlayerId}}">
             <text class="rank-no">{{index + 1}}</text>
             <image class="rank-avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
             <text class="rank-nick">{{item.nickname}}</text>
@@ -37,11 +37,10 @@
     </scroll-view>
   </view>
 
-  <!-- 底部操作（按身份显示） -->
-  <view class="actions {{isOwner ? 'actions-3' : 'actions-2'}}">
+  <!-- 底部操作（所有人通用） -->
+  <view class="actions actions-2">
     <view class="action-btn auto" bind:tap="onAutoScore">辅助算分</view>
     <view class="action-btn history" bind:tap="onShowHistory">历史记录</view>
-    <view wx:if="{{isOwner}}" class="action-btn finish" bind:tap="onFinishRoom">结束本局</view>
   </view>
 
   <!-- 同步状态条 -->
@@ -56,4 +55,17 @@
     bind:confirm="onPopupConfirm"
     bind:cancel="onPopupCancel"
   ></score-popup>
+
+  <!-- self 操作弹窗（修改昵称 / 退出房间 / 结束本局） -->
+  <player-popup
+    wx:if="{{selfPopupVisible}}"
+    player-id="{{selfPopupTarget._id}}"
+    nickname="{{selfPopupTarget.nickname}}"
+    avatar-index="{{selfPopupTarget.avatarIndex}}"
+    total-score="{{selfPopupTarget.totalScore}}"
+    bind:close="onSelfPopupClose"
+    bind:editnickname="onSelfPopupEditNickname"
+    bind:leaveroom="onSelfPopupLeaveRoom"
+    bind:finishroom="onSelfPopupFinishRoom"
+  ></player-popup>
 </view>

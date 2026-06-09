@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "房间",
   "usingComponents": {
-    "score-popup": "/components/score-popup/index"
+    "score-popup": "/components/score-popup/index",
+    "player-popup": "/components/player-popup/index"
   }
 }
