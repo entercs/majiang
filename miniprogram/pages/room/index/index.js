@@ -321,6 +321,8 @@ Page({
             clientId: appStore.clientId,
           }).then((res) => {
             if (res.code === 'OK') {
+              // 清掉首页的 myRooms 缓存，避免显示过期数据
+              try { wx.removeStorageSync('myRooms'); } catch (e) {}
               wx.reLaunch({ url: '/pages/home/index' });
             } else {
               handleError(res, this);
