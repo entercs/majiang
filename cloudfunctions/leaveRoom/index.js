@@ -2,7 +2,7 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
-const { ROOM_STATUS } = require('../_shared/constants');
+const { ROOM_STATUS } = require('./_shared/constants');
 
 /**
  * 玩家退出房间

@@ -2,7 +2,7 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
-const { ROOM_STATUS } = require('../_shared/constants');
+const { ROOM_STATUS } = require('./_shared/constants');
 
 /**
  * 拉取当前 clientId 的所有相关房间
