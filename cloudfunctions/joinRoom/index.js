@@ -4,9 +4,18 @@ const db = cloud.database();
 const _ = db.command;
 const { ROOM_STATUS } = require('./_shared/constants');
 
+/**
+ * 加入或重入房间
+ * 入参: { roomCode, nickname, avatarIndex, clientId }
+ *
+ * 优先级：
+ *  1) 按 clientId 查旧 player（重入）→ 激活 isOnline，更新昵称/头像
+ *  2) 按 openid 查旧 player（兜底）→ 激活 isOnline
+ *  3) 都没有 → 创建新 player
+ */
 exports.main = async (event) => {
   const { openid } = cloud.getWXContext();
-  const { roomCode, nickname, avatarIndex } = event;
+  const { roomCode, nickname, avatarIndex, clientId } = event;
 
   if (typeof roomCode !== 'string' || !/^\d{6}$/.test(roomCode)) {
     return { code: 'INVALID_INPUT', message: '房间号格式错误', detail: 'roomCode' };
@@ -18,7 +27,7 @@ exports.main = async (event) => {
     return { code: 'INVALID_INPUT', message: '头像序号 0-7', detail: 'avatarIndex' };
   }
 
-  // 1. Find room
+  // 1. 找房间
   const roomRes = await db.collection('rooms').where({ roomCode }).limit(1).get();
   if (roomRes.data.length === 0) {
     return { code: 'ROOM_NOT_FOUND', message: '房间号不存在' };
@@ -29,19 +38,60 @@ exports.main = async (event) => {
     return { code: 'ROOM_FINISHED', message: '本局已结束' };
   }
 
-  // 2. Check if already joined (by openid) — 必须在人数检查前，避免重入也被拒
-  if (openid) {
-    const existing = await db.collection('players').where({ roomId: room._id, openid }).limit(1).get();
+  const now = Date.now();
+
+  // 2. 优先按 clientId 重入
+  if (clientId) {
+    const existing = await db.collection('players')
+      .where({ roomId: room._id, clientId })
+      .limit(1)
+      .get();
     if (existing.data.length > 0) {
-      return { code: 'OK', data: { roomId: room._id, playerId: existing.data[0]._id, ruleId: room.ruleId, rejoined: true } };
+      const p = existing.data[0];
+      // 激活 + 同步昵称头像
+      await db.collection('players').doc(p._id).update({
+        data: {
+          isOnline: true,
+          lastSeenAt: now,
+          nickname: nickname.trim(),
+          avatarIndex,
+        },
+      });
+      // 旧 player 不在 playerIds 时补回
+      if (!room.playerIds || !room.playerIds.includes(p._id)) {
+        await db.collection('rooms').doc(room._id).update({
+          data: { playerIds: _.push(p._id) },
+        });
+      }
+      return {
+        code: 'OK',
+        data: { roomId: room._id, playerId: p._id, ruleId: room.ruleId, isRejoin: true },
+      };
     }
   }
 
-  // 3. 不限人数。座位号 = 当前人数（0-indexed 按加入顺序）
+  // 3. 兜底：按 openid 查旧 player（微信登录用户）
+  if (openid) {
+    const existing = await db.collection('players')
+      .where({ roomId: room._id, openid })
+      .limit(1)
+      .get();
+    if (existing.data.length > 0) {
+      const p = existing.data[0];
+      await db.collection('players').doc(p._id).update({
+        data: { isOnline: true, lastSeenAt: now },
+      });
+      return {
+        code: 'OK',
+        data: { roomId: room._id, playerId: p._id, ruleId: room.ruleId, isRejoin: true },
+      };
+    }
+  }
+
+  // 4. 创建新 player
   const playersRes = await db.collection('players').where({ roomId: room._id }).count();
   const seatIndex = playersRes.total;
 
-  // 4. Create player
   const playerRes = await db.collection('players').add({
     data: {
       roomId: room._id,
@@ -50,17 +100,20 @@ exports.main = async (event) => {
       seatIndex,
       isOwner: false,
       openid: openid || null,
-      joinedAt: Date.now(),
-    }
+      clientId: clientId || null,
+      joinedAt: now,
+      isOnline: true,
+      lastSeenAt: now,
+    },
   });
 
-  // 5. Update room's playerIds
+  // 5. 更新 rooms.playerIds
   await db.collection('rooms').doc(room._id).update({
-    data: { playerIds: _.push(playerRes._id) }
+    data: { playerIds: _.push(playerRes._id) },
   });
 
   return {
     code: 'OK',
-    data: { roomId: room._id, playerId: playerRes._id, ruleId: room.ruleId, seatIndex }
+    data: { roomId: room._id, playerId: playerRes._id, ruleId: room.ruleId, isRejoin: false, seatIndex },
   };
 };
