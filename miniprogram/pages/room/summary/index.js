@@ -1,29 +1,91 @@
 const roomStore = require('../../../stores/roomStore');
 
 Page({
-  data: { rankList: [], totalRounds: 0, maxFan: 0, winTypeSummary: '' },
+  data: {
+    rankList: [],
+    totalRounds: 0,
+    maxFan: 0,
+    winTypeSummary: '',
+    isReadonly: false,
+  },
+
+  onLoad(query) {
+    if (query.roomId) {
+      this.setData({ isReadonly: query.readonly === '1' });
+      this._loadFromCloud(query.roomId);
+    } else {
+      this._render();
+    }
+  },
 
   onShow() {
+    if (!this.data.isReadonly) {
+      this._render();
+    }
+  },
+
+  // 来自 roomStore（房间内结束后跳转）
+  _render() {
     const totals = roomStore.getTotalScores();
     const players = roomStore.players;
     const rankList = players
       .map(p => ({ ...p, total: totals[p._id] || 0 }))
       .sort((a, b) => b.total - a.total);
 
-    const totalRounds = roomStore.rounds.length;
-    const maxFan = roomStore.rounds.reduce((m, r) => Math.max(m, r.fan), 0);
+    this.setData({
+      rankList,
+      ...this._calcStats(roomStore.rounds),
+    });
+  },
+
+  // 来自云端（首页"已结束"直接查看战绩）
+  _loadFromCloud(roomId) {
+    const db = wx.cloud.database();
+    Promise.all([
+      db.collection('rooms').doc(roomId).get(),
+      db.collection('players').where({ roomId }).get(),
+      db.collection('rounds').where({ roomId }).orderBy('roundIndex', 'asc').get(),
+    ]).then(([roomRes, playersRes, roundsRes]) => {
+      const players = playersRes.data;
+      const rounds = roundsRes.data;
+
+      // 算总分
+      const totals = {};
+      players.forEach(p => { totals[p._id] = 0; });
+      rounds.forEach(r => {
+        Object.entries(r.scoreChanges || {}).forEach(([pid, delta]) => {
+          totals[pid] = (totals[pid] || 0) + Number(delta || 0);
+        });
+      });
+
+      const rankList = players
+        .map(p => ({ ...p, total: totals[p._id] || 0 }))
+        .sort((a, b) => b.total - a.total);
+
+      this.setData({ rankList, ...this._calcStats(rounds) });
+    }).catch((err) => {
+      console.error('summary load error:', err);
+      wx.showToast({ title: '加载失败', icon: 'none' });
+    });
+  },
+
+  _calcStats(rounds) {
+    const totalRounds = rounds.length;
+    const maxFan = rounds.reduce((m, r) => Math.max(m, r.fan || 0), 0);
     const typeCount = {};
-    roomStore.rounds.forEach(r => {
-      typeCount[r.winType] = (typeCount[r.winType] || 0) + 1;
+    rounds.forEach(r => {
+      const t = r.winType || (r.type === 'manual' ? '手动' : r.type);
+      if (t) typeCount[t] = (typeCount[t] || 0) + 1;
     });
     const winTypeSummary = Object.entries(typeCount)
       .map(([t, c]) => `${t}×${c}`).join(' / ');
-
-    this.setData({ rankList, totalRounds, maxFan, winTypeSummary });
+    return { totalRounds, maxFan, winTypeSummary };
   },
 
   onBackHome() {
-    roomStore.reset();
-    wx.switchTab({ url: '/pages/home/index' });
+    if (!this.data.isReadonly) {
+      roomStore.reset();
+    }
+    wx.reLaunch({ url: '/pages/home/index' });
   },
 });
