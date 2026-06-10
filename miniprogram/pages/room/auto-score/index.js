@@ -19,6 +19,16 @@ Page({
   },
 
   onLoad() {
+    // 守卫：必须先在房间里才能进入此页
+    if (!roomStore.roomId || !roomStore.currentPlayerId) {
+      wx.showModal({
+        title: '提示',
+        content: '你不是这个房间的玩家，无法记分。',
+        showCancel: false,
+        success: () => wx.navigateBack(),
+      });
+      return;
+    }
     const players = roomStore.players.slice().sort((a, b) => a.seatIndex - b.seatIndex);
     this.setData({
       players,
