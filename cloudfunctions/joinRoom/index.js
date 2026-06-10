@@ -4,7 +4,25 @@ const db = cloud.database();
 const _ = db.command;
 const { ROOM_STATUS } = require('./_shared/constants');
 
-const MAX_JOINED_ROOMS = 100;  // 与 createRoom 一致
+const MAX_JOINED_ROOMS = 10;  // 与 createRoom 一致
+
+async function _deleteOldestPlayers(clientId, count) {
+  const oldestRes = await db.collection('players')
+    .where({ clientId })
+    .orderBy('joinedAt', 'asc')
+    .limit(count)
+    .get();
+  let deleted = 0;
+  for (const p of oldestRes.data) {
+    try {
+      await db.collection('players').doc(p._id).remove();
+      deleted++;
+    } catch (e) {
+      console.error('remove player failed', p._id, e.message);
+    }
+  }
+  return deleted;
+}
 
 /**
  * 加入或重入房间
@@ -32,9 +50,11 @@ exports.main = async (event) => {
   // 0. 反滥用：累计加入房间数（仅对"新加入"生效——重入不计）
   // 放在房间校验前可以挡住纯恶意
   if (clientId) {
-    const joinedRes = await db.collection('players').where({ clientId }).count();
-    if (joinedRes.total >= MAX_JOINED_ROOMS) {
-      return { code: 'TOO_MANY_JOINED_ROOMS', message: `你已加入 ${joinedRes.total} 个房间，达到上限（${MAX_JOINED_ROOMS}）` };
+    let joinedRes = await db.collection('players').where({ clientId }).count();
+    while (joinedRes.total >= MAX_JOINED_ROOMS) {
+      const deleted = await _deleteOldestPlayers(clientId, joinedRes.total - MAX_JOINED_ROOMS + 1);
+      if (deleted === 0) break;
+      joinedRes = await db.collection('players').where({ clientId }).count();
     }
   }
 

@@ -4,6 +4,8 @@ const db = cloud.database();
 const _ = db.command;
 const { ROOM_STATUS } = require('./_shared/constants');
 
+const MAX_RETURN = 10;  // 最多返回 10 场（active + finished 合并）
+
 /**
  * 拉取当前 clientId 的所有相关房间
  * 入参: { clientId }
@@ -15,6 +17,8 @@ const { ROOM_STATUS } = require('./_shared/constants');
  *  2) 收集去重 roomIds
  *  3) 一次性查所有 rooms
  *  4) 对每个 room 算在线人数 + 归类
+ *  5) 按"最近活跃"（player.joinedAt 降序）排序
+ *  6) 截前 10 场
  */
 exports.main = async (event) => {
   const { clientId } = event;
@@ -31,8 +35,17 @@ exports.main = async (event) => {
       return { code: 'OK', data: { active: [], finished: [] } };
     }
 
+    // 每个 roomId 取 joinedAt 最大的 player（最最近一次加入）
+    const latestByRoom = new Map();
+    for (const p of playersRes.data) {
+      const cur = latestByRoom.get(p.roomId);
+      if (!cur || (p.joinedAt || 0) > (cur.joinedAt || 0)) {
+        latestByRoom.set(p.roomId, p);
+      }
+    }
+
     // 2. 去重 roomIds
-    const roomIds = [...new Set(playersRes.data.map(p => p.roomId))];
+    const roomIds = [...latestByRoom.keys()];
 
     // 3. 一次性查所有 room
     const roomsRes = await db.collection('rooms')
@@ -40,32 +53,45 @@ exports.main = async (event) => {
       .get();
     const rooms = roomsRes.data;
 
-    // 4. 归类
+    // 4. 归类（"进行中" = 我在该房 isOnline=true 且房间 active）
     const active = [];
     const finished = [];
     for (const room of rooms) {
       const onlineCountRes = await db.collection('players')
         .where({ roomId: room._id, isOnline: true })
         .count();
+      const myPlayer = latestByRoom.get(room._id);
       const item = {
         roomId: room._id,
         roomCode: room.roomCode,
         onlineCount: onlineCountRes.total,
+        isOnline: myPlayer.isOnline,        // 我是否在线
+        joinedAt: myPlayer.joinedAt,        // 我加入/重入时间
         closedAt: room.closedAt || null,
         closedBy: room.closedBy || null,
       };
-      if (room.status === ROOM_STATUS.ACTIVE) {
+      // "进行中"：room 是 active 且我在房间里（isOnline）
+      if (room.status === ROOM_STATUS.ACTIVE && myPlayer.isOnline) {
         active.push(item);
       } else {
         finished.push(item);
       }
     }
 
-    // 5. 排序
-    active.sort((a, b) => (b.closedAt || 0) - (a.closedAt || 0));
-    finished.sort((a, b) => (b.closedAt || 0) - (a.closedAt || 0));
+    // 5. 按 joinedAt 倒序（最近活跃的在前）
+    const sortByJoined = (a, b) => (b.joinedAt || 0) - (a.joinedAt || 0);
+    active.sort(sortByJoined);
+    finished.sort(sortByJoined);
 
-    return { code: 'OK', data: { active, finished } };
+    // 6. 合并截前 10 场
+    const merged = [...active, ...finished]
+      .sort(sortByJoined)
+      .slice(0, MAX_RETURN);
+    const activeIds = new Set(active.map(r => r.roomId));
+    const finalActive = merged.filter(r => activeIds.has(r.roomId));
+    const finalFinished = merged.filter(r => !activeIds.has(r.roomId));
+
+    return { code: 'OK', data: { active: finalActive, finished: finalFinished } };
   } catch (err) {
     console.error('getMyRooms error:', err);
     return { code: 'INTERNAL_ERROR', message: err.message };

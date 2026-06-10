@@ -8,14 +8,36 @@ const { getDefaultRule } = require('./_shared/ruleService');
 const { ROOM_STATUS } = require('./_shared/constants');
 
 const RATE_LIMIT_MS = 30 * 1000;        // 同一 clientId 30s 内只能创建 1 次
-const MAX_ACTIVE_ROOMS = 10;            // 同一 clientId 最多 10 个 active 房间
-const MAX_JOINED_ROOMS = 100;           // 同一 clientId 最多累计加入 100 个房间
+const MAX_ACTIVE_ROOMS = 3;             // 同一 clientId 最多 3 个 active 房间
+const MAX_JOINED_ROOMS = 10;            // 同一 clientId 最多累计 10 个房间
+
+/**
+ * 删除指定 clientId 的"最旧" player 记录（按 joinedAt 升序）
+ * 返回被删除的 player 数量
+ */
+async function _deleteOldestPlayers(clientId, count) {
+  const oldestRes = await db.collection('players')
+    .where({ clientId })
+    .orderBy('joinedAt', 'asc')
+    .limit(count)
+    .get();
+  let deleted = 0;
+  for (const p of oldestRes.data) {
+    try {
+      await db.collection('players').doc(p._id).remove();
+      deleted++;
+    } catch (e) {
+      console.error('remove player failed', p._id, e.message);
+    }
+  }
+  return deleted;
+}
 
 exports.main = async (event, context) => {
   const { openid } = cloud.getWXContext();
   const { nickname = '玩家', avatarIndex = 0, clientId } = event;
 
-  // 1. Validate nickname and avatar
+  // 1. Validate
   if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
     return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
   }
@@ -23,9 +45,9 @@ exports.main = async (event, context) => {
     return { code: 'INVALID_INPUT', message: '头像序号 0-7', detail: 'avatarIndex' };
   }
 
-  // 2. 反滥用检查（仅在有 clientId 时）
+  // 2. 反滥用 + 自动清理（仅在有 clientId 时）
   if (clientId) {
-    // 2a. 频率：最近 30s 内是否建过房
+    // 2a. 频率：30s 内只能 1 次
     const recentRes = await db.collection('players')
       .where({ clientId, isOwner: true })
       .orderBy('joinedAt', 'desc')
@@ -38,12 +60,16 @@ exports.main = async (event, context) => {
         return { code: 'RATE_LIMIT', message: `操作太频繁，请 ${wait} 秒后再试`, detail: 'createRoom' };
       }
     }
-    // 2b. 累计加入房间数
-    const joinedRes = await db.collection('players').where({ clientId }).count();
-    if (joinedRes.total >= MAX_JOINED_ROOMS) {
-      return { code: 'TOO_MANY_JOINED_ROOMS', message: `你已加入 ${joinedRes.total} 个房间，达到上限（${MAX_JOINED_ROOMS}）` };
+
+    // 2b. 累计房间数：超 10 → 自动删最旧的，让出名额
+    let joinedRes = await db.collection('players').where({ clientId }).count();
+    while (joinedRes.total >= MAX_JOINED_ROOMS) {
+      const deleted = await _deleteOldestPlayers(clientId, joinedRes.total - MAX_JOINED_ROOMS + 1);
+      if (deleted === 0) break;  // 安全兜底
+      joinedRes = await db.collection('players').where({ clientId }).count();
     }
-    // 2c. 活跃房间数：clientId 拥有的所有 player 记录，对应 room.status=active 且 isOnline=true
+
+    // 2c. 活跃房间数（isOnline=true 且 room.status='active'）超 3 → 自动删最旧的
     const myPlayersRes = await db.collection('players').where({ clientId }).get();
     const myRoomIds = [...new Set(myPlayersRes.data.map(p => p.roomId))];
     let activeCount = 0;
@@ -51,30 +77,42 @@ exports.main = async (event, context) => {
       const myRoomsRes = await db.collection('rooms')
         .where({ _id: _.in(myRoomIds), status: ROOM_STATUS.ACTIVE })
         .get();
-      // 仅算"我在线"（isOnline=true）的那些房
       const myOnlineRoomIds = new Set(myPlayersRes.data.filter(p => p.isOnline).map(p => p.roomId));
       activeCount = myRoomsRes.data.filter(r => myOnlineRoomIds.has(r._id)).length;
     }
-    if (activeCount >= MAX_ACTIVE_ROOMS) {
-      return { code: 'TOO_MANY_ACTIVE_ROOMS', message: `你在 ${activeCount} 个房间进行中，达到上限（${MAX_ACTIVE_ROOMS}）` };
+    while (activeCount >= MAX_ACTIVE_ROOMS) {
+      // 删最旧的一条"在线" player 记录
+      const oldestOnline = await db.collection('players')
+        .where({ clientId, isOnline: true })
+        .orderBy('joinedAt', 'asc')
+        .limit(1)
+        .get();
+      if (oldestOnline.data.length === 0) break;
+      try {
+        await db.collection('players').doc(oldestOnline.data[0]._id).remove();
+      } catch (e) {
+        console.error('remove player failed', e.message);
+        break;
+      }
+      activeCount--;
     }
   }
 
-  // 2. Generate unique 6-digit room code
+  // 3. Generate unique 6-digit room code
   const roomCode = await generateUniqueRoomCode(async (code) => {
     const res = await db.collection('rooms').where({ roomCode: code }).count();
     return res.total > 0;
   });
 
   try {
-    // 3. Create default rule
+    // 4. Create default rule
     const ruleRes = await db.collection('rules').add({
       data: { ...getDefaultRule(), roomId: 'pending', createdAt: Date.now() }
     });
     const ruleId = ruleRes._id;
     await db.collection('rules').doc(ruleId).update({ data: { roomId: ruleId } });
 
-    // 4. Create room
+    // 5. Create room
     const roomRes = await db.collection('rooms').add({
       data: {
         roomCode,
@@ -87,7 +125,7 @@ exports.main = async (event, context) => {
     });
     const roomId = roomRes._id;
 
-    // 5. Create player (owner)
+    // 6. Create player (owner)
     const playerRes = await db.collection('players').add({
       data: {
         roomId,
@@ -103,7 +141,7 @@ exports.main = async (event, context) => {
       }
     });
 
-    // 6. Update room's playerIds
+    // 7. Update room's playerIds
     await db.collection('rooms').doc(roomId).update({
       data: { playerIds: [playerRes._id] }
     });
