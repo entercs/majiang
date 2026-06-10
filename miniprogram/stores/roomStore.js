@@ -8,6 +8,7 @@ const store = observable({
   rounds: [],
   isOwner: false,
   currentPlayerId: '',
+  roomStatus: 'active',  // 'active' | 'finished'；history 用它判断"进行中"标签
   _stopWatchPlayers: null,
   _stopWatchRounds: null,
   _stopWatchRule: null,
@@ -21,15 +22,17 @@ const store = observable({
     this.rounds = [];
     this.isOwner = false;
     this.currentPlayerId = '';
+    this.roomStatus = 'active';
   },
 
-  setRoom({ roomId, roomCode, rule, players, isOwner, currentPlayerId }) {
+  setRoom({ roomId, roomCode, rule, players, isOwner, currentPlayerId, status }) {
     this.roomId = roomId;
     this.roomCode = roomCode;
     this.rule = rule;
     this.players = players;
     this.isOwner = isOwner;
     this.currentPlayerId = currentPlayerId;
+    if (status) this.roomStatus = status;
   },
 
   setRule(rule) { this.rule = rule; },

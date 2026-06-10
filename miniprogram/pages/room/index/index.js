@@ -67,6 +67,7 @@ Page({
           players,
           isOwner: room.ownerId === appStore.openid,
           currentPlayerId: myId,
+          status: room.status,
         });
         this._startSync();
         this._render();

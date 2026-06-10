@@ -1,5 +1,5 @@
 const roomStore = require('../../../stores/roomStore');
-const { groupRoundsBySession, isOngoing, formatTime, roundToTransfers } = require('../../../utils/roundGrouping');
+const { groupRoundsBySession, formatTime, roundToTransfers } = require('../../../utils/roundGrouping');
 
 Page({
   data: {
@@ -23,8 +23,8 @@ Page({
 
   _render() {
     const groups = groupRoundsBySession(roomStore.rounds);
-    const now = Date.now();
-    const ongoing = isOngoing(groups, now);
+    // "进行中"标签反映房间状态：active → 显示在最新一局；finished → 不显示
+    const isRoomActive = roomStore.roomStatus === 'active';
 
     const enriched = groups.map((g, idx) => {
       const nameOf = (id) => {
@@ -37,7 +37,7 @@ Page({
         startTime: g.startTime,
         endTime: g.endTime,
         timeText: formatTime(g.startTime),
-        ongoing: isLast && ongoing,
+        ongoing: isLast && isRoomActive,
         transfers,
         // roundNo 按时间顺序编号（reverse 前 idx=0 是最老的一局）
         roundNo: idx + 1,
