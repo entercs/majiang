@@ -26,7 +26,7 @@ Page({
     const now = Date.now();
     const ongoing = isOngoing(groups, now);
 
-    const enriched = groups.map((g) => {
+    const enriched = groups.map((g, idx) => {
       const nameOf = (id) => {
         const p = roomStore.players.find((x) => x._id === id);
         return p ? p.nickname : id;
@@ -39,10 +39,12 @@ Page({
         timeText: formatTime(g.startTime),
         ongoing: isLast && ongoing,
         transfers,
+        // roundNo 按时间顺序编号（reverse 前 idx=0 是最老的一局）
+        roundNo: idx + 1,
       };
     });
 
-    // 倒序展示（最新一局在最上）
+    // 倒序展示（最新一局在最上），reverse 后 roundNo 自动变成反序（最新局号最大）
     this.setData({ groups: enriched.reverse() });
   },
 
