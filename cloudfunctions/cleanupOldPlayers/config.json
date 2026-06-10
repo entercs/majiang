@@ -1,0 +1,10 @@
+{
+  "permissions": { "openapi": [] },
+  "triggers": [
+    {
+      "name": "cleanupOldPlayersTimer",
+      "type": "timer",
+      "config": "0 0 3 * * * *"
+    }
+  ]
+}
