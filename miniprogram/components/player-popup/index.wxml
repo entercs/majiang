@@ -5,7 +5,6 @@
     <text class="score">{{totalScore}} 分</text>
 
     <button class="popup-btn default" bind:tap="onEditNickname">修改昵称</button>
-    <button class="popup-btn default" bind:tap="onLeaveRoom">退出房间</button>
     <button class="popup-btn danger" bind:tap="onFinishRoom">结束本局</button>
   </view>
 </view>
