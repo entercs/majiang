@@ -90,6 +90,7 @@ Page({
     roundService.submitRound({
       roomId: roomStore.roomId,
       clientId,
+      playerId: roomStore.currentPlayerId,
       type: 'auto',
       input,
     }).then((res) => {

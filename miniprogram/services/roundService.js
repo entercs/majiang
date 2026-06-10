@@ -5,13 +5,15 @@ const { callFunction } = require('./cloud');
  * @param {Object} params
  * @param {string} params.roomId
  * @param {string} params.clientId
+ * @param {string} [params.playerId] - 调用方在房间里的 playerId（避免老数据 clientId 为 null）
  * @param {string} [params.type] - 'manual' | 'auto'
  * @param {Object} [params.scoreChanges] - { playerId: delta }（manual 模式）
  * @param {Object} [params.input] - { winnerId, loserId, winType, fan, ... }（auto 模式）
  * @returns {Promise<{code: string, data?: Object, message?: string}>}
  */
-function submitRound({ roomId, clientId, type, scoreChanges, input }) {
+function submitRound({ roomId, clientId, playerId, type, scoreChanges, input }) {
   const data = { roomId, clientId };
+  if (playerId) data.playerId = playerId;
   if (type) data.type = type;
   if (scoreChanges) data.scoreChanges = scoreChanges;
   if (input) data.input = input;

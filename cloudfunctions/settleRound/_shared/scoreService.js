@@ -46,10 +46,12 @@ function calculateRound(rule, input, players) {
 }
 
 function applyZimo(players, winnerId, huScore, mul, scoreChanges) {
+  // 通用：每位 loser 付 perLose，winner 收 perLose × (losers 数量)
   const perLose = huScore * mul;
+  const loserCount = players.filter(p => p._id !== winnerId).length;
   players.forEach((p) => {
     if (p._id === winnerId) {
-      scoreChanges[p._id] += perLose * 3;
+      scoreChanges[p._id] += perLose * loserCount;
     } else {
       scoreChanges[p._id] -= perLose;
     }
