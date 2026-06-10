@@ -13,6 +13,7 @@
 .btn.primary::after { border: none; }
 .btn.default { background: #fff; color: #333; border: 1rpx solid #e0e0e0; }
 .btn.default::after { border: none; }
+.loading-tip { text-align: center; padding: 24rpx 0; color: #7A7E83; font-size: 26rpx; }
 
 .my-rooms { margin-top: 60rpx; }
 .section-title { font-size: 26rpx; color: #7A7E83; margin-bottom: 16rpx; padding-left: 8rpx; }

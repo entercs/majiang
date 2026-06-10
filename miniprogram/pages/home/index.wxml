@@ -8,9 +8,13 @@
     <text class="nick">{{nickname || '点击设置昵称'}}</text>
   </view>
 
-  <view class="actions">
+  <!-- 加载中：禁用按钮，避免用户在自动跳转前点"创建"造成竞态 -->
+  <view class="actions" wx:if="{{loaded}}">
     <button class="btn primary" bindtap="onCreateRoom">创建牌局</button>
     <button class="btn default" bindtap="onJoinRoom">加入牌局</button>
+  </view>
+  <view class="actions" wx:else>
+    <view class="loading-tip">正在加载房间信息...</view>
   </view>
 
   <view class="my-rooms" wx:if="{{myRooms.active.length > 0}}">

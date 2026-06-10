@@ -50,8 +50,12 @@ Page({
   data: { loaded: false, myRooms: { active: [], finished: [] }, nickname: '' },
 
   onShow() {
-    this._maybeRedirectToActiveRoom();
     this._renderMyRooms();
+    // 只在首次进入时检查 active 房间（避免用户从其他页回来被强制跳走）
+    if (!this._hasChecked) {
+      this._hasChecked = true;
+      this._maybeRedirectToActiveRoom();
+    }
   },
 
   onLoad() {
@@ -83,15 +87,21 @@ Page({
   },
 
   // 若有 active 房间则 reLaunch 到那个房间页
+  // 注意：检查期间 loaded=false，按钮被禁用，避免用户中途点"创建房间"造成竞态
   _maybeRedirectToActiveRoom() {
     if (this._redirecting) return;
+    this.setData({ loaded: false });
     roomService.getMyRooms({ clientId: appStore.clientId })
       .then((res) => {
-        if (res.code !== 'OK') return;
+        if (res.code !== 'OK') {
+          this.setData({ loaded: true });
+          return;
+        }
         const active = (res.data.active || []);
-        if (active.length === 0) return;
-        // 避免重入：缓存中若有当前 roomId 标记则不跳（让用户手动点）
-        // 但首次冷启动应该自动跳，所以这里直接跳
+        if (active.length === 0) {
+          this.setData({ loaded: true });
+          return;
+        }
         this._redirecting = true;
         const target = active[0];
         roomService.joinRoom({
@@ -102,10 +112,19 @@ Page({
         }).then((jr) => {
           if (jr.code === 'OK') {
             wx.reLaunch({ url: `/pages/room/index/index?roomId=${jr.data.roomId}` });
+            // 跳转后不需要 setData（页面会被销毁）
+          } else {
+            this.setData({ loaded: true });
+            this._redirecting = false;
           }
-        }).catch(() => { this._redirecting = false; });
+        }).catch(() => {
+          this.setData({ loaded: true });
+          this._redirecting = false;
+        });
       })
-      .catch(() => {});
+      .catch(() => {
+        this.setData({ loaded: true });
+      });
   },
 
   onCreateRoom() {
