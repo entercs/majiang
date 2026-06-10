@@ -26,6 +26,8 @@ Page({
   },
 
   onShow() {
+    // 隐藏 WeChat 首页按钮（圈圈）—— 防止点 home 跳出后再被自动跳回造成死循环
+    if (wx.hideHomeButton) wx.hideHomeButton();
     this._render();
     // 每秒重渲染（让 30 秒时间窗口自动清零）
     if (this._renderTimer) clearInterval(this._renderTimer);
