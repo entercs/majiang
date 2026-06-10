@@ -4,6 +4,8 @@ const db = cloud.database();
 const _ = db.command;
 const { ROOM_STATUS } = require('./_shared/constants');
 
+const MAX_JOINED_ROOMS = 100;  // 与 createRoom 一致
+
 /**
  * 加入或重入房间
  * 入参: { roomCode, nickname, avatarIndex, clientId }
@@ -25,6 +27,15 @@ exports.main = async (event) => {
   }
   if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 7) {
     return { code: 'INVALID_INPUT', message: '头像序号 0-7', detail: 'avatarIndex' };
+  }
+
+  // 0. 反滥用：累计加入房间数（仅对"新加入"生效——重入不计）
+  // 放在房间校验前可以挡住纯恶意
+  if (clientId) {
+    const joinedRes = await db.collection('players').where({ clientId }).count();
+    if (joinedRes.total >= MAX_JOINED_ROOMS) {
+      return { code: 'TOO_MANY_JOINED_ROOMS', message: `你已加入 ${joinedRes.total} 个房间，达到上限（${MAX_JOINED_ROOMS}）` };
+    }
   }
 
   // 1. 找房间

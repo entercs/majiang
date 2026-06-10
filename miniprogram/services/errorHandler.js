@@ -8,6 +8,9 @@ const MESSAGE_MAP = {
   [ERR_CODE.INVALID_INPUT]: { toast: '输入有误', modal: true, useMessage: true },
   [ERR_CODE.FAN_EXCEEDS_MAX]: { toast: '番数超出封顶', useMessage: true },
   [ERR_CODE.GANG_COUNT_EXCEEDS]: { toast: '杠数过多', useMessage: true },
+  [ERR_CODE.RATE_LIMIT]: { toast: '操作太频繁，请稍后再试', useMessage: true },
+  [ERR_CODE.TOO_MANY_ACTIVE_ROOMS]: { toast: '你在太多进行中的房间，请先关闭一些', useMessage: true },
+  [ERR_CODE.TOO_MANY_JOINED_ROOMS]: { toast: '你已加入太多房间，请清理后再试', useMessage: true },
   [ERR_CODE.INTERNAL_ERROR]: { toast: '系统繁忙，请稍后重试' },
 };
 
