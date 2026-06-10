@@ -81,10 +81,6 @@ exports.main = async (event) => {
 
     const winner = players.find(p => p._id === w);
     if (!winner) return { code: 'INVALID_INPUT', message: '胡牌者不在房间中' };
-    // 辅助算分：提交者必须是赢家本人（每人只能控制自己的记分）
-    if (winner.clientId !== clientId) {
-      return { code: 'FORBIDDEN', message: '只有赢家本人可以提交本局' };
-    }
     if (input.loserId) {
       const loser = players.find(p => p._id === input.loserId);
       if (!loser) return { code: 'INVALID_INPUT', message: '点炮者不在房间中' };
@@ -104,6 +100,19 @@ exports.main = async (event) => {
     if (!isBalanced) {
       return { code: 'INTERNAL_ERROR', message: '分数计算不平衡' };
     }
+
+    // 辅助算分：提交者必须是"给分者"（每人只能控制自己的扣分）
+    // 自摸：3 个非赢家任一可提交（他们都得扣分）
+    // 点炮：必须是点炮者（loserId 对应的玩家）
+    const caller = players.find(p => p.clientId === clientId);
+    if (!caller) {
+      return { code: 'FORBIDDEN', message: '你不在该房间中' };
+    }
+    const callerDelta = sc[caller._id] || 0;
+    if (callerDelta >= 0) {
+      return { code: 'FORBIDDEN', message: '只能算自己给别人多少分，无法应用' };
+    }
+
     finalScoreChanges = sc;
     winnerId = w;
     winType = t;
