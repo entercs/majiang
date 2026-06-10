@@ -127,7 +127,7 @@ Page({
           isOwner: true,
           currentPlayerId: res.data.playerId,
         });
-        wx.navigateTo({ url: '/pages/room/index/index' });
+        wx.reLaunch({ url: '/pages/room/index/index' });
       } else {
         handleError({ code: res.code, message: res.message }, this);
       }
@@ -165,7 +165,7 @@ Page({
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
-        wx.navigateTo({ url: `/pages/room/index/index?roomId=${res.data.roomId}` });
+        wx.reLaunch({ url: `/pages/room/index/index?roomId=${res.data.roomId}` });
       } else {
         handleError(res, this);
       }
@@ -188,7 +188,7 @@ Page({
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
-        wx.navigateTo({ url: `/pages/room/index/index?roomId=${res.data.roomId}` });
+        wx.reLaunch({ url: `/pages/room/index/index?roomId=${res.data.roomId}` });
       } else {
         handleError({ code: res.code, message: res.message }, this);
       }
