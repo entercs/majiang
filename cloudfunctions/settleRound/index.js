@@ -6,7 +6,7 @@ const { WIN_TYPE } = require('./_shared/constants');
 
 exports.main = async (event) => {
   const { openid } = cloud.getWXContext();
-  const { roomId, clientId, type, scoreChanges, input } = event;
+  const { roomId, clientId, playerId, type, scoreChanges, input } = event;
 
   if (!roomId || !clientId || !type) {
     return { code: 'INVALID_INPUT', message: '参数缺失', detail: 'roomId/clientId/type' };
