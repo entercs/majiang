@@ -3,6 +3,7 @@
     <text class="code-label">房间号</text>
     <text class="code-value" bind:tap="onCopyCode">{{roomCode}}</text>
     <text class="share-btn" bind:tap="onShareRoom">分享</text>
+    <text class="leave-btn" bind:tap="onLeaveRoom">退出</text>
   </view>
 
   <!-- 4 家横排（按 seatIndex 排序，人数不限） -->

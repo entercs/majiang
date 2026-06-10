@@ -50,6 +50,7 @@ Page({
   data: { loaded: false, myRooms: { active: [], finished: [] }, nickname: '' },
 
   onShow() {
+    this._maybeRedirectToActiveRoom();
     this._renderMyRooms();
   },
 
@@ -79,6 +80,32 @@ Page({
         }
       })
       .catch((err) => handleError(err, this));
+  },
+
+  // 若有 active 房间则 reLaunch 到那个房间页
+  _maybeRedirectToActiveRoom() {
+    if (this._redirecting) return;
+    roomService.getMyRooms({ clientId: appStore.clientId })
+      .then((res) => {
+        if (res.code !== 'OK') return;
+        const active = (res.data.active || []);
+        if (active.length === 0) return;
+        // 避免重入：缓存中若有当前 roomId 标记则不跳（让用户手动点）
+        // 但首次冷启动应该自动跳，所以这里直接跳
+        this._redirecting = true;
+        const target = active[0];
+        roomService.joinRoom({
+          roomCode: target.roomCode,
+          nickname: appStore.nickname,
+          avatarIndex: appStore.avatarIndex || 0,
+          clientId: appStore.clientId,
+        }).then((jr) => {
+          if (jr.code === 'OK') {
+            wx.reLaunch({ url: `/pages/room/index/index?roomId=${jr.data.roomId}` });
+          }
+        }).catch(() => { this._redirecting = false; });
+      })
+      .catch(() => {});
   },
 
   onCreateRoom() {

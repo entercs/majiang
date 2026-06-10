@@ -227,6 +227,49 @@ Page({
     this.setData({ popupVisible: false });
   },
 
+  // ====== 退出房间（从头部"退出"按钮或系统返回键） ======
+
+  onLeaveRoom() {
+    wx.showModal({
+      title: '退出房间',
+      content: '确定要退出吗？你可以稍后从首页「进行中」回到房间。',
+      success: (modal) => {
+        if (modal.confirm) {
+          this._doLeaveRoom();
+        }
+      },
+    });
+  },
+
+  _doLeaveRoom() {
+    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
+    if (!me) {
+      // 拿不到身份（页面被异常打开），直接回首页
+      try { wx.removeStorageSync('myRooms'); } catch (e) {}
+      wx.reLaunch({ url: '/pages/home/index' });
+      return;
+    }
+    roomService.leaveRoom({
+      roomId: roomStore.roomId,
+      playerId: me._id,
+      clientId: appStore.clientId,
+    }).then((res) => {
+      // 清掉首页的 myRooms 缓存
+      try { wx.removeStorageSync('myRooms'); } catch (e) {}
+      wx.reLaunch({ url: '/pages/home/index' });
+    }).catch(() => {
+      // 即使云函数失败也回首页（让用户能重试）
+      try { wx.removeStorageSync('myRooms'); } catch (e) {}
+      wx.reLaunch({ url: '/pages/home/index' });
+    });
+  },
+
+  // 拦截系统左上角返回按钮：必须先"退出房间"才能离开
+  onBackPress() {
+    this.onLeaveRoom();
+    return true; // 阻止默认返回
+  },
+
   // 修改昵称（云端同步）
   _showEditNicknameModal() {
     const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
@@ -309,29 +352,7 @@ Page({
 
   onSelfPopupLeaveRoom() {
     this.setData({ selfPopupVisible: false });
-    wx.showModal({
-      title: '退出房间',
-      content: '确定要退出吗？你可以稍后从首页「进行中」回到房间。',
-      success: (modal) => {
-        if (modal.confirm) {
-          const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
-          if (!me) return;
-          roomService.leaveRoom({
-            roomId: roomStore.roomId,
-            playerId: me._id,
-            clientId: appStore.clientId,
-          }).then((res) => {
-            if (res.code === 'OK') {
-              // 清掉首页的 myRooms 缓存，避免显示过期数据
-              try { wx.removeStorageSync('myRooms'); } catch (e) {}
-              wx.reLaunch({ url: '/pages/home/index' });
-            } else {
-              handleError(res, this);
-            }
-          }).catch((err) => handleError(err, this));
-        }
-      },
-    });
+    this.onLeaveRoom();
   },
 
   onSelfPopupFinishRoom() {
