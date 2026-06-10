@@ -1,25 +1,26 @@
 const roomStore = require('../../../stores/roomStore');
 const roundService = require('../../../services/roundService');
-const { calculateRound } = require('../../../services/scoreService');
 const { handleError } = require('../../../services/errorHandler');
 const { generateTempId } = require('../../../utils/cloud-id');
-const { DIANPAO_TYPES } = require('../../../utils/constants');
+
+const WIN_TYPE_LABELS = {
+  zimo: '自摸',
+  dianpao: '点炮',
+};
 
 Page({
   data: {
-    players: [],
-    otherPlayers: [],
-    winnerId: '',
-    loserId: '',
-    winType: 'zimo',
-    fan: 1,
-    needsLoser: false,
-    preview: [],
-    previewDelta: {},
+    otherPlayers: [],     // 排除自己
+    targetId: '',
+    targetName: '',
+    winType: 'zimo',      // 默认自摸
+    winTypeLabel: '自摸',
+    amount: 0,            // 计算的金额（番数固定 1，后续完善）
+    canApply: false,
   },
 
   onLoad() {
-    // 守卫：必须先在房间里才能进入此页
+    // 守卫：必须先在房间里
     if (!roomStore.roomId || !roomStore.currentPlayerId) {
       wx.showModal({
         title: '提示',
@@ -29,92 +30,61 @@ Page({
       });
       return;
     }
-    const players = roomStore.players.slice().sort((a, b) => a.seatIndex - b.seatIndex);
-    this.setData({
-      players,
-      otherPlayers: players.filter(p => p._id !== this.data.winnerId),
-      rule: roomStore.rule,
-    });
+    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
+    if (!me) {
+      wx.navigateBack();
+      return;
+    }
+    // 排除自己
+    const otherPlayers = roomStore.players
+      .filter(p => p._id !== roomStore.currentPlayerId)
+      .sort((a, b) => a.seatIndex - b.seatIndex);
+    this.setData({ otherPlayers });
   },
 
-  onSelectWinner(e) {
+  onSelectTarget(e) {
     const id = e.currentTarget.dataset.id;
+    const target = this.data.otherPlayers.find(p => p._id === id);
     this.setData({
-      winnerId: id,
-      otherPlayers: this.data.players.filter(p => p._id !== id),
-      loserId: '',
-      preview: [],
+      targetId: id,
+      targetName: target ? target.nickname : '',
     });
+    this._recompute();
   },
 
   onSelectWinType(e) {
     const winType = e.currentTarget.dataset.type;
-    const needsLoser = DIANPAO_TYPES.has(winType);
-    this.setData({ winType, needsLoser, loserId: '', preview: [] });
+    this.setData({ winType, winTypeLabel: WIN_TYPE_LABELS[winType] || winType });
+    this._recompute();
   },
 
-  onSelectLoser(e) {
-    this.setData({ loserId: e.currentTarget.dataset.id, preview: [] });
-  },
-
-  onChangeFan(e) {
-    const fan = Number(e.detail.value) || 0;
-    this.setData({ fan, preview: [] });
-  },
-
-  onCalculate() {
-    if (!this.data.winnerId) {
-      wx.showToast({ title: '请选择胡牌者', icon: 'none' });
-      return;
-    }
-    if (this.data.needsLoser && !this.data.loserId) {
-      wx.showToast({ title: '请选择点炮者', icon: 'none' });
-      return;
-    }
-    if (this.data.fan < 0) {
-      wx.showToast({ title: '番数不能为负', icon: 'none' });
-      return;
-    }
-
-    const input = {
-      winnerId: this.data.winnerId,
-      loserId: this.data.needsLoser ? this.data.loserId : undefined,
-      winType: this.data.winType,
-      fan: this.data.fan,
-      gangEvents: [],
-      maResults: [],
-    };
-
-    try {
-      const { scoreChanges, isBalanced } = calculateRound(roomStore.rule, input, this.data.players);
-      if (!isBalanced) {
-        wx.showToast({ title: '分数计算不平衡', icon: 'none' });
-        return;
-      }
-      const preview = this.data.players.map(p => ({
-        _id: p._id,
-        nickname: p.nickname,
-        delta: scoreChanges[p._id] || 0,
-      }));
-      this.setData({ preview, previewDelta: scoreChanges });
-    } catch (e) {
-      handleError(e, this);
-    }
+  // 简化版算分：底分 × 倍数 × 1 番
+  // 完整规则（番数、杠分、买马等）后续完善
+  _recompute() {
+    const rule = roomStore.rule || { baseScore: 1, zimoMul: 2, dianpaoMul: 1 };
+    const mul = this.data.winType === 'zimo' ? rule.zimoMul : rule.dianpaoMul;
+    const amount = (rule.baseScore || 1) * mul * 1;
+    const canApply = !!(this.data.targetId && this.data.winType);
+    this.setData({ amount, canApply });
   },
 
   onApply() {
-    if (this.data.preview.length === 0) {
-      wx.showToast({ title: '请先点计算', icon: 'none' });
+    if (!this.data.canApply) {
+      wx.showToast({ title: '请选完再应用', icon: 'none' });
       return;
     }
+    // 构造 round 输入：我是 loser，target 是 winner
     const input = {
-      winnerId: this.data.winnerId,
-      loserId: this.data.needsLoser ? this.data.loserId : undefined,
+      winnerId: this.data.targetId,
       winType: this.data.winType,
-      fan: this.data.fan,
+      fan: 1,
       gangEvents: [],
       maResults: [],
     };
+    // 点炮场景：把我也带上让云函数知道 loser 是谁
+    if (this.data.winType === 'dianpao') {
+      input.loserId = roomStore.currentPlayerId;
+    }
     const clientId = 'auto_' + generateTempId();
     wx.showLoading({ title: '应用中...' });
     roundService.submitRound({
@@ -126,7 +96,7 @@ Page({
       wx.hideLoading();
       if (res.code === 'OK') {
         wx.showToast({ title: '已应用', icon: 'success' });
-        setTimeout(() => wx.navigateBack(), 800);
+        setTimeout(() => wx.navigateBack(), 600);
       } else {
         handleError({ code: res.code, message: res.message }, this);
       }

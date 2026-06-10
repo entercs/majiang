@@ -6,20 +6,19 @@
 .player-card.selected { border-color: #1aad19; background: #f0f8e8; }
 .avatar { width: 64rpx; height: 64rpx; border-radius: 50%; }
 .nick { font-size: 22rpx; color: #333; margin-top: 8rpx; max-width: 90rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.types { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.type-item { padding: 16rpx 24rpx; border: 2rpx solid #e0e0e0; border-radius: 8rpx; font-size: 26rpx; }
+.types { display: flex; gap: 12rpx; }
+.type-item { flex: 1; text-align: center; padding: 24rpx 0; border: 2rpx solid #e0e0e0; border-radius: 8rpx; font-size: 28rpx; }
 .type-item.selected { border-color: #1aad19; background: #f0f8e8; color: #1aad19; }
-.fan-input { width: 100%; padding: 16rpx; border: 2rpx solid #e0e0e0; border-radius: 8rpx; font-size: 30rpx; box-sizing: border-box; }
-.preview { }
-.preview-row { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid #f0f0f0; }
-.preview-row:last-child { border-bottom: none; }
-.preview-rank { font-size: 28rpx; color: #333; }
-.preview-score { font-size: 30rpx; font-weight: 600; }
-.preview-score.positive { color: #d33; }
-.preview-score.negative { color: #1aad19; }
-.footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 16rpx; padding: 24rpx; background: #fff; border-top: 1rpx solid #f0f0f0; }
-.btn { flex: 1; height: 80rpx; line-height: 80rpx; text-align: center; border-radius: 12rpx; font-size: 30rpx; }
+
+.preview-card { background: linear-gradient(135deg, #1aad19, #4cd964); border-radius: 16rpx; padding: 32rpx 24rpx; margin-bottom: 24rpx; text-align: center; color: #fff; box-shadow: 0 4rpx 16rpx rgba(26, 173, 25, 0.2); }
+.preview-text { font-size: 28rpx; opacity: 0.95; margin-bottom: 12rpx; }
+.preview-name { font-weight: 700; }
+.preview-amount { font-size: 80rpx; font-weight: 800; line-height: 1.2; letter-spacing: 4rpx; }
+.preview-unit { font-size: 32rpx; font-weight: 600; opacity: 0.9; }
+.preview-meta { font-size: 22rpx; opacity: 0.8; margin-top: 8rpx; }
+
+.footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; padding: 24rpx; background: #fff; border-top: 1rpx solid #f0f0f0; }
+.btn { flex: 1; height: 88rpx; line-height: 88rpx; text-align: center; border-radius: 12rpx; font-size: 32rpx; font-weight: 600; }
 .btn.primary { background: #1aad19; color: #fff; }
-.btn.default { background: #fff; color: #333; border: 1rpx solid #e0e0e0; }
 .btn.disabled { opacity: 0.5; }
 .btn:active { opacity: 0.8; }
