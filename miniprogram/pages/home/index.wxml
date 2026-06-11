@@ -27,13 +27,12 @@
   <view class="my-rooms" wx:if="{{myRooms.finished.length > 0}}">
     <view class="section-title">已结束</view>
     <view class="room-list">
-      <view class="room-item finished" wx:for="{{myRooms.finished}}" wx:key="roomId"
-            bind:tap="onTapFinished" data-roomid="{{item.roomId}}">
+      <view class="room-item finished" wx:for="{{myRooms.finished}}" wx:key="roomId">
         <view class="room-item-left">
           <text class="time">{{item.closedAtText}}</text>
           <text class="meta">房号 {{item.roomCode}}</text>
         </view>
-        <text class="view-btn" catch:tap="onTapFinished" data-roomid="{{item.roomId}}">查看战绩 ›</text>
+        <text class="view-btn" bind:tap="onTapFinished" data-roomid="{{item.roomId}}">查看战绩 ›</text>
       </view>
     </view>
   </view>
