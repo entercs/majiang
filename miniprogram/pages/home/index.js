@@ -26,8 +26,14 @@ function _saveMyRoomsCache(data) {
 function _formatClosedAt(ts) {
   if (!ts) return '';
   const d = new Date(ts);
+  const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const HHMM = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const isSameDay = d.toDateString() === now.toDateString();
+  if (isSameDay) return `今天 ${HHMM}`;
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  if (d.toDateString() === yesterday.toDateString()) return `昨天 ${HHMM}`;
+  return `${d.getMonth() + 1}/${d.getDate()} ${HHMM}`;
 }
 
 function _decorateMyRooms(data) {

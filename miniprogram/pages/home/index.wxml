@@ -29,8 +29,8 @@
     <view class="room-list">
       <view class="room-item finished" wx:for="{{myRooms.finished}}" wx:key="roomId"
             bind:tap="onTapFinished" data-roomid="{{item.roomId}}">
-        <text class="code">{{item.roomCode}}</text>
-        <text class="meta">{{item.closedAtText}}</text>
+        <text class="time">{{item.closedAtText}}</text>
+        <text class="meta">房号 {{item.roomCode}}</text>
       </view>
     </view>
   </view>

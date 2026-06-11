@@ -22,8 +22,10 @@
 .room-item:last-child { border-bottom: none; }
 .room-item:active { background: #f5f5f5; }
 .room-item .code { font-size: 36rpx; font-weight: 700; color: #1aad19; letter-spacing: 4rpx; }
+.room-item .time { font-size: 30rpx; font-weight: 600; color: #333; }
 .room-item .meta { font-size: 24rpx; color: #7A7E83; }
 .room-item.finished .code { color: #7A7E83; }
+.room-item.finished { flex-direction: column; align-items: flex-start; gap: 4rpx; }
 
 .help-row { text-align: center; margin-top: 80rpx; }
 .help-link { font-size: 24rpx; color: #999; text-decoration: underline; }
