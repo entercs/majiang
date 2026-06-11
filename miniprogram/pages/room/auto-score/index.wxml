@@ -16,6 +16,20 @@
     </view>
   </view>
 
+  <!-- 付给 -->
+  <view class="section">
+    <view class="section-title">付给</view>
+    <view wx:if="{{otherPlayers.length === 0}}" class="empty-hint">房间里没有其他玩家</view>
+    <view class="players-grid" wx:else>
+      <view wx:for="{{otherPlayers}}" wx:key="_id"
+            class="player-card {{targetId === item._id ? 'selected' : ''}}"
+            bindtap="onTargetChange" data-id="{{item._id}}">
+        <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+        <text class="nick">{{item.nickname}}</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 总番数大展示 -->
   <view class="total-card {{canHu ? 'can-hu' : 'cannot-hu'}}">
     <view class="total-row">
@@ -30,9 +44,8 @@
     <view class="section-title">牌型</view>
     <view class="chip-grid">
       <view wx:for="{{cardTypes}}" wx:key="key"
-            class="chip {{cardTypeKeys.indexOf(item.key) >= 0 ? 'selected' : ''}}"
+            class="chip {{cardTypeSelected[item.key] ? 'selected' : ''}}"
             bindtap="onCardTypeChange" data-value="{{item.key}}">
-        <text wx:if="{{cardTypeKeys.indexOf(item.key) >= 0}}" class="check">✓</text>
         <text>{{item.label}}</text>
       </view>
     </view>
@@ -45,72 +58,7 @@
       <view wx:for="{{winTypes}}" wx:key="key"
             class="chip {{winType === item.key ? 'selected' : ''}}"
             bindtap="onWinTypeChange" data-value="{{item.key}}">
-        {{item.label}}
-      </view>
-    </view>
-  </view>
-
-  <!-- 字牌与杠牌（合并：发财/明杠/暗杠/红中/白板） -->
-  <view class="section">
-    <view class="section-title">字牌与杠牌</view>
-
-    <view class="sub-section">
-      <view class="sub-title">发财</view>
-      <view class="chip-grid compact">
-        <view wx:for="{{facaiOptions}}" wx:key="key"
-              class="chip compact-chip {{facai === item.key ? 'selected' : ''}}"
-              bindtap="onFacaiChange" data-value="{{item.key}}">
-          <text wx:if="{{facai === item.key}}" class="check">✓</text>
-          <text>{{item.label}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="sub-section">
-      <view class="sub-title">明杠数牌</view>
-      <view class="chip-grid compact">
-        <view wx:for="{{mingGangOptions}}" wx:key="key"
-              class="chip compact-chip {{mingGang === item.key ? 'selected' : ''}}"
-              bindtap="onMingGangChange" data-value="{{item.key}}">
-          <text wx:if="{{mingGang === item.key}}" class="check">✓</text>
-          <text>{{item.label}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="sub-section">
-      <view class="sub-title">暗杠数牌</view>
-      <view class="chip-grid compact">
-        <view wx:for="{{anGangOptions}}" wx:key="key"
-              class="chip compact-chip {{anGang === item.key ? 'selected' : ''}}"
-              bindtap="onAnGangChange" data-value="{{item.key}}">
-          <text wx:if="{{anGang === item.key}}" class="check">✓</text>
-          <text>{{item.label}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="sub-section">
-      <view class="sub-title">红中</view>
-      <view class="chip-grid compact">
-        <view wx:for="{{hongZhongOptions}}" wx:key="key"
-              class="chip compact-chip {{hongZhong === item.key ? 'selected' : ''}}"
-              bindtap="onHongZhongChange" data-value="{{item.key}}">
-          <text wx:if="{{hongZhong === item.key}}" class="check">✓</text>
-          <text>{{item.label}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="sub-section">
-      <view class="sub-title">白板</view>
-      <view class="chip-grid compact">
-        <view wx:for="{{baiBanOptions}}" wx:key="key"
-              class="chip compact-chip {{baiBan === item.key ? 'selected' : ''}}"
-              bindtap="onBaiBanChange" data-value="{{item.key}}">
-          <text wx:if="{{baiBan === item.key}}" class="check">✓</text>
-          <text>{{item.label}}</text>
-        </view>
+        <text>{{item.label}}</text>
       </view>
     </view>
   </view>
@@ -122,12 +70,70 @@
       <view wx:for="{{qmOptions}}" wx:key="key"
             class="chip {{qmType === item.key ? 'selected' : ''}} {{qmDisabledMap[item.key] ? 'disabled' : ''}}"
             bindtap="onQmChange" data-value="{{item.key}}">
-        <text wx:if="{{qmType === item.key}}" class="check">✓</text>
         <text>{{item.label}}</text>
       </view>
     </view>
-    <view wx:if="{{qmDisabledMap.menqianqing}}" class="disabled-hint">（门前清与所选冲突：碰/明杠 或 明杠数牌≥1）</view>
-    <view wx:if="{{qmDisabledMap.kadang || qmDisabledMap.bianzhang || qmDisabledMap.diandiao}}" class="disabled-hint">（听牌型与七对互斥）</view>
+    <view wx:if="{{qmHint}}" class="disabled-hint">（{{qmHint}}）</view>
+  </view>
+
+  <!-- 字牌与杠牌（合并：发财/明杠/暗杠/红中/白板） -->
+  <view class="section">
+    <view class="section-title">字牌与杠牌</view>
+
+    <view class="sub-section">
+      <view class="sub-title">发财</view>
+      <view class="chip-grid">
+        <view wx:for="{{facaiOptions}}" wx:key="key"
+              class="chip {{facai === item.key ? 'selected' : ''}}"
+              bindtap="onFacaiChange" data-value="{{item.key}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sub-section">
+      <view class="sub-title">明杠数牌</view>
+      <view class="chip-grid">
+        <view wx:for="{{mingGangOptions}}" wx:key="key"
+              class="chip {{mingGang === item.key ? 'selected' : ''}}"
+              bindtap="onMingGangChange" data-value="{{item.key}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sub-section">
+      <view class="sub-title">暗杠数牌</view>
+      <view class="chip-grid">
+        <view wx:for="{{anGangOptions}}" wx:key="key"
+              class="chip {{anGang === item.key ? 'selected' : ''}}"
+              bindtap="onAnGangChange" data-value="{{item.key}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sub-section">
+      <view class="sub-title">红中</view>
+      <view class="chip-grid">
+        <view wx:for="{{hongZhongOptions}}" wx:key="key"
+              class="chip {{hongZhong === item.key ? 'selected' : ''}}"
+              bindtap="onHongZhongChange" data-value="{{item.key}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="sub-section">
+      <view class="sub-title">白板</view>
+      <view class="chip-grid">
+        <view wx:for="{{baiBanOptions}}" wx:key="key"
+              class="chip {{baiBan === item.key ? 'selected' : ''}}"
+              bindtap="onBaiBanChange" data-value="{{item.key}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 番数明细 -->
@@ -144,19 +150,7 @@
     </view>
   </view>
 
-  <!-- 付给谁 -->
-  <view class="section">
-    <view class="section-title">我付给谁</view>
-    <view wx:if="{{otherPlayers.length === 0}}" class="empty-hint">房间里没有其他玩家</view>
-    <view class="players-grid" wx:else>
-      <view wx:for="{{otherPlayers}}" wx:key="_id"
-            class="player-card {{targetId === item._id ? 'selected' : ''}}"
-            bindtap="onTargetChange" data-id="{{item._id}}">
-        <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
-        <text class="nick">{{item.nickname}}</text>
-      </view>
-    </view>
-  </view>
+
 
   <!-- 预览 + 操作 -->
   <view class="preview-card" wx:if="{{canApply}}">
