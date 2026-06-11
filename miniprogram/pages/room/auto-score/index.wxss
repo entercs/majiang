@@ -48,6 +48,9 @@
   color: #1aad19;
   font-weight: 600;
 }
+.chip.disabled { opacity: 0.4; background: #f8f8f8; }
+.chip.disabled.selected { opacity: 0.4; }  /* 禁用时不显示高亮 */
+.chip-grid.disabled .chip:active { opacity: 0.4; }  /* 禁用时点不动 */
 .chip:active { opacity: 0.7; }
 
 /* 计数器 */

@@ -107,19 +107,16 @@
   </view>
 
   <!-- 门清与听牌型 -->
-  <view class="section" wx:if="{{!menqingDisabled}}">
+  <view class="section">
     <view class="section-title">门清与听牌型 (最多1个)</view>
-    <view class="chip-grid">
+    <view class="chip-grid {{menqingDisabled ? 'disabled' : ''}}">
       <view wx:for="{{menqingOptions}}" wx:key="key"
-            class="chip {{menqing === item.key ? 'selected' : ''}}"
+            class="chip {{menqing === item.key ? 'selected' : ''}} {{menqingDisabled ? 'disabled' : ''}}"
             bindtap="onMenqingChange" data-value="{{item.key}}">
         {{item.label}}
       </view>
     </view>
-  </view>
-  <view class="section section-disabled" wx:else>
-    <view class="section-title">门清与听牌型</view>
-    <view class="disabled-hint">（七一对/全求人不兼容门清）</view>
+    <view wx:if="{{menqingDisabled}}" class="disabled-hint">（与所选冲突：碰/明杠 或 明杠数牌≥1）</view>
   </view>
 
   <!-- 番数明细 -->
