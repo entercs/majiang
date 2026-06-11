@@ -53,14 +53,9 @@ const BAIBAN_OPTIONS = [
   { key: 'anggang', label: '暗杠', fan: 4 },
 ];
 
-// 门前清（单选）
-const MENQING_OPTIONS = [
-  { key: 'none', label: '无', fan: 0 },
+// 门清与听牌型（合并：4 个选项单选；各自有不同互斥）
+const QM_OPTIONS = [
   { key: 'menqianqing', label: '门前清', fan: 1 },
-];
-
-// 听牌型（卡当/边张/单吊 三选一）
-const TINGPAI_OPTIONS = [
   { key: 'kadang', label: '卡当', fan: 1 },
   { key: 'bianzhang', label: '边张', fan: 1 },
   { key: 'diandiao', label: '单吊', fan: 1 },
@@ -68,6 +63,13 @@ const TINGPAI_OPTIONS = [
 
 // 与"门前清"冲突的字牌选项（碰、明杠影响门前清；暗刻、暗杠不影响）
 const HONOR_CONFLICTS_WITH_MENQING = ['peng', 'minggang'];
+
+// "卡当/边张/单吊"组中受"全求人"影响禁用单吊
+const DISABLED_BY_QUANQIUREN = ['diandiao'];
+// "卡当/边张/单吊"组中受"七对"影响全部禁用
+const DISABLED_BY_QIYIDUI = ['kadang', 'bianzhang', 'diandiao'];
+// "门前清"受字牌影响禁用
+const DISABLED_BY_HONOR = ['menqianqing'];
 
 // 找选项的辅助
 const _find = (arr, key) => arr.find(o => o.key === key);
@@ -118,13 +120,9 @@ Page({
     baiBanOptions: BAIBAN_OPTIONS.filter(o => o.key !== 'none'),
     baiBan: null,
 
-    menqingOptions: MENQING_OPTIONS.filter(o => o.key !== 'none'),
-    menqing: null,
-    menqingDisabled: false,
-
-    tingpaiOptions: TINGPAI_OPTIONS,
-    tingpaiType: null,
-    tingpaiDisabled: false,
+    qmOptions: QM_OPTIONS,
+    qmType: null,
+    qmDisabledMap: {},
 
     otherPlayers: [],
     targetId: '',
@@ -221,7 +219,7 @@ Page({
     const value = Number(e.currentTarget.dataset.value);
     const newValue = (this.data.mingGang === value) ? 0 : value;
     this.setData({ mingGang: newValue });
-    this._applyMenqingMutex();
+    this._applyQmMutex();
     this._recompute();
   },
 
@@ -236,7 +234,7 @@ Page({
     const value = e.currentTarget.dataset.value;
     const newValue = (this.data.hongZhong === value) ? null : value;
     this.setData({ hongZhong: newValue });
-    this._applyMenqingMutex();
+    this._applyQmMutex();
     this._recompute();
   },
 
@@ -244,33 +242,27 @@ Page({
     const value = e.currentTarget.dataset.value;
     const newValue = (this.data.baiBan === value) ? null : value;
     this.setData({ baiBan: newValue });
-    this._applyMenqingMutex();
+    this._applyQmMutex();
     this._recompute();
   },
 
-  onMenqingChange(e) {
-    if (this.data.menqingDisabled) return;
+  onQmChange(e) {
     const value = e.currentTarget.dataset.value;
-    const newValue = (this.data.menqing === value) ? null : value;
-    if (newValue) {
-      this.setData({
-        menqing: newValue,
+    if (this.data.qmDisabledMap[value]) return;
+    const cur = this.data.qmType;
+    const newValue = (cur === value) ? null : value;
+    let updates = { qmType: newValue };
+    // 选门清时清掉冲突项
+    if (newValue === 'menqianqing') {
+      updates = {
+        ...updates,
         hongZhong: null,
         baiBan: null,
         mingGang: 0,
-      });
-      this._applyMenqingMutex();
-    } else {
-      this.setData({ menqing: null });
+      };
     }
-    this._recompute();
-  },
-
-  onTingpaiChange(e) {
-    if (this.data.tingpaiDisabled) return;
-    const value = e.currentTarget.dataset.value;
-    const newValue = (this.data.tingpaiType === value) ? null : value;
-    this.setData({ tingpaiType: newValue });
+    this.setData(updates);
+    this._applyQmMutex();
     this._recompute();
   },
 
@@ -291,10 +283,8 @@ Page({
       anGang: 0,
       hongZhong: null,
       baiBan: null,
-      menqing: null,
-      menqingDisabled: false,
-      tingpaiType: null,
-      tingpaiDisabled: false,
+      qmType: null,
+      qmDisabledMap: {},
       targetId: '',
       targetName: '',
     });
@@ -329,20 +319,35 @@ Page({
     }).catch(err => { wx.hideLoading(); handleError(err, this); });
   },
 
-  // 门前清互斥：碰红中/明杠红中/碰白板/明杠白板/明杠数牌≥1 → 禁用门前清
-  _applyMenqingMutex() {
-    const hzConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.hongZhong);
-    const bbConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.baiBan);
-    const mgConflicts = this.data.mingGang >= 1;
-    const shouldDisable = hzConflicts || bbConflicts || mgConflicts;
-    if (shouldDisable) {
-      if (!this.data.menqingDisabled || this.data.menqing !== null) {
-        this.setData({ menqingDisabled: true, menqing: null });
-      }
+  // 门清与听牌型互斥（按 key 单独禁用）：
+  //  - 门前清 ↔ 碰红中/明杠红中/碰白板/明杠白板/明杠数牌≥1
+  //  - 卡当/边张/单吊 ↔ 七对
+  //  - 单吊 ↔ 全求人
+  _applyQmMutex() {
+    const keys = this.data.cardTypeKeys || [];
+    const isQiyidui = keys.includes('qiyidui');
+    const isQuanqiuren = keys.includes('quanqiuren');
+    const hzConflict = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.hongZhong);
+    const bbConflict = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.baiBan);
+    const mgConflict = this.data.mingGang >= 1;
+    const honorConflict = hzConflict || bbConflict || mgConflict;
+
+    const map = {};
+    if (honorConflict) {
+      DISABLED_BY_HONOR.forEach(k => { map[k] = true; });
+    }
+    if (isQiyidui) {
+      DISABLED_BY_QIYIDUI.forEach(k => { map[k] = true; });
+    }
+    if (isQuanqiuren) {
+      DISABLED_BY_QUANQIUREN.forEach(k => { map[k] = true; });
+    }
+
+    // 若当前选中的被禁用，清空
+    if (this.data.qmType && map[this.data.qmType]) {
+      this.setData({ qmType: null, qmDisabledMap: map });
     } else {
-      if (this.data.menqingDisabled) {
-        this.setData({ menqingDisabled: false });
-      }
+      this.setData({ qmDisabledMap: map });
     }
   },
 
@@ -386,16 +391,10 @@ Page({
       if (bb && bb.fan > 0) breakdown.push({ name: `白板·${bb.label}`, fan: bb.fan });
     }
 
-    // 6) 门前清
-    if (!this.data.menqingDisabled && this.data.menqing) {
-      const mq = _find(MENQING_OPTIONS, this.data.menqing);
-      if (mq && mq.fan > 0) breakdown.push({ name: mq.label, fan: mq.fan });
-    }
-
-    // 7) 听牌型
-    if (!this.data.tingpaiDisabled && this.data.tingpaiType) {
-      const tp = _find(TINGPAI_OPTIONS, this.data.tingpaiType);
-      if (tp && tp.fan > 0) breakdown.push({ name: tp.label, fan: tp.fan });
+    // 6) 门清与听牌型（合并）
+    if (this.data.qmType && !this.data.qmDisabledMap[this.data.qmType]) {
+      const qm = _find(QM_OPTIONS, this.data.qmType);
+      if (qm && qm.fan > 0) breakdown.push({ name: qm.label, fan: qm.fan });
     }
 
     const totalFan = breakdown.reduce((s, x) => s + x.fan, 0);
