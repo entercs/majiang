@@ -25,25 +25,13 @@
     <view class="can-hu-text">{{canHuText}}</view>
   </view>
 
-  <!-- 基础牌型 -->
+  <!-- 牌型（多选） -->
   <view class="section">
-    <view class="section-title">基础牌型</view>
+    <view class="section-title">牌型（多选）</view>
     <view class="chip-grid">
-      <view wx:for="{{basicTypes}}" wx:key="key"
-            class="chip {{basicType === item.key ? 'selected' : ''}}"
-            bindtap="onBasicTypeChange" data-value="{{item.key}}">
-        {{item.label}}
-      </view>
-    </view>
-  </view>
-
-  <!-- 组合牌型（多选） -->
-  <view class="section">
-    <view class="section-title">组合牌型（多选，各+15番）</view>
-    <view class="chip-grid">
-      <view wx:for="{{comboOptions}}" wx:key="key"
-            class="chip {{combos.indexOf(item.key) >= 0 ? 'selected' : ''}}"
-            bindtap="onComboChange" data-value="{{item.key}}">
+      <view wx:for="{{cardTypes}}" wx:key="key"
+            class="chip {{cardTypeKeys.indexOf(item.key) >= 0 ? 'selected' : ''}}"
+            bindtap="onCardTypeChange" data-value="{{item.key}}">
         {{item.label}}
       </view>
     </view>
@@ -61,11 +49,12 @@
     </view>
   </view>
 
-  <!-- 字牌与杠牌（chip 形式）-->
+  <!-- 字牌与杠牌（合并：发财/明杠/暗杠/红中/白板） -->
   <view class="section">
     <view class="section-title">字牌与杠牌</view>
-    <view class="counter-row">
-      <text class="counter-label">发财</text>
+
+    <view class="sub-section">
+      <view class="sub-title">发财</view>
       <view class="chip-grid compact">
         <view wx:for="{{facaiOptions}}" wx:key="key"
               class="chip compact-chip {{facai === item.key ? 'selected' : ''}}"
@@ -74,8 +63,9 @@
         </view>
       </view>
     </view>
-    <view class="counter-row">
-      <text class="counter-label">明杠数牌</text>
+
+    <view class="sub-section">
+      <view class="sub-title">明杠数牌</view>
       <view class="chip-grid compact">
         <view wx:for="{{mingGangOptions}}" wx:key="key"
               class="chip compact-chip {{mingGang === item.key ? 'selected' : ''}}"
@@ -84,8 +74,9 @@
         </view>
       </view>
     </view>
-    <view class="counter-row">
-      <text class="counter-label">暗杠数牌</text>
+
+    <view class="sub-section">
+      <view class="sub-title">暗杠数牌</view>
       <view class="chip-grid compact">
         <view wx:for="{{anGangOptions}}" wx:key="key"
               class="chip compact-chip {{anGang === item.key ? 'selected' : ''}}"
@@ -94,26 +85,23 @@
         </view>
       </view>
     </view>
-  </view>
 
-  <!-- 红中 + 白板（合并） -->
-  <view class="section">
-    <view class="section-title">红中 / 白板</view>
     <view class="sub-section">
       <view class="sub-title">红中</view>
-      <view class="chip-grid">
+      <view class="chip-grid compact">
         <view wx:for="{{hongZhongOptions}}" wx:key="key"
-              class="chip {{hongZhong === item.key ? 'selected' : ''}}"
+              class="chip compact-chip {{hongZhong === item.key ? 'selected' : ''}}"
               bindtap="onHongZhongChange" data-value="{{item.key}}">
           {{item.label}}
         </view>
       </view>
     </view>
+
     <view class="sub-section">
       <view class="sub-title">白板</view>
-      <view class="chip-grid">
+      <view class="chip-grid compact">
         <view wx:for="{{baiBanOptions}}" wx:key="key"
-              class="chip {{baiBan === item.key ? 'selected' : ''}}"
+              class="chip compact-chip {{baiBan === item.key ? 'selected' : ''}}"
               bindtap="onBaiBanChange" data-value="{{item.key}}">
           {{item.label}}
         </view>
@@ -121,9 +109,9 @@
     </view>
   </view>
 
-  <!-- 门清与听牌型 -->
+  <!-- 门前清 + 听牌型（两个独立单选区） -->
   <view class="section">
-    <view class="section-title">门清与听牌型 (最多1个)</view>
+    <view class="section-title">门前清（单选）</view>
     <view class="chip-grid {{menqingDisabled ? 'disabled' : ''}}">
       <view wx:for="{{menqingOptions}}" wx:key="key"
             class="chip {{menqing === item.key ? 'selected' : ''}} {{menqingDisabled ? 'disabled' : ''}}"
@@ -132,6 +120,18 @@
       </view>
     </view>
     <view wx:if="{{menqingDisabled}}" class="disabled-hint">（与所选冲突：碰/明杠 或 明杠数牌≥1）</view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">听牌型（三选一）</view>
+    <view class="chip-grid {{tingpaiDisabled ? 'disabled' : ''}}">
+      <view wx:for="{{tingpaiOptions}}" wx:key="key"
+            class="chip {{tingpaiType === item.key ? 'selected' : ''}} {{tingpaiDisabled ? 'disabled' : ''}}"
+            bindtap="onTingpaiChange" data-value="{{item.key}}">
+        {{item.label}}
+      </view>
+    </view>
+    <view wx:if="{{tingpaiDisabled}}" class="disabled-hint">（与七对互斥）</view>
   </view>
 
   <!-- 番数明细 -->

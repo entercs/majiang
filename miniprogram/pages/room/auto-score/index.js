@@ -7,14 +7,26 @@ const { generateTempId } = require('../../../utils/cloud-id');
 
 const RULE_TYPES = ['黄梅麻将'];
 
-const BASIC_TYPES = [
-  { key: 'pinghu', label: '平胡', fan: 1 },
-  { key: 'qiyidui', label: '七对', fan: 15 },
-  { key: 'pengpenghu', label: '碰碰胡', fan: 15 },
-  { key: 'qingyise', label: '清一色', fan: 15 },
-  { key: 'hunyise', label: '混一色', fan: 15 },
-  { key: 'quanqiuren', label: '全求人', fan: 30 },
+// 牌型（原"基础牌型"），多选带互斥
+const CARD_TYPES = [
+  { key: 'pinghu', label: '平胡', fan: 1 },         // primary：与十五番互斥
+  { key: 'buqiuren', label: '不求人', fan: 1 },     // primary：与十五番互斥
+  { key: 'qiyidui', label: '七对', fan: 15 },       // 十五番：与碰碰胡互斥
+  { key: 'pengpenghu', label: '碰碰胡', fan: 15 },  // 十五番：与七对互斥
+  { key: 'qingyise', label: '清一色', fan: 15 },     // 十五番：与混一色互斥
+  { key: 'hunyise', label: '混一色', fan: 15 },     // 十五番：与清一色互斥
+  { key: 'quanqiuren', label: '全求人', fan: 30 },   // 十五番：可与七对/清一色等共存
 ];
+
+// 1番 primary 组（与十五番互斥）
+const PRIMARY_CARDS = ['pinghu', 'buqiuren'];
+// 十五番内部互斥对
+const CARD_RIVAL = {
+  qiyidui: 'pengpenghu',
+  pengpenghu: 'qiyidui',
+  qingyise: 'hunyise',
+  hunyise: 'qingyise',
+};
 
 const WIN_TYPES = [
   { key: 'dianpao', label: '点炮', fan: 0 },
@@ -27,38 +39,32 @@ const WIN_TYPES = [
 
 const HONGZHONG_OPTIONS = [
   { key: 'none', label: '无', fan: 0 },
-  { key: 'peng', label: '碰红中', fan: 1 },
-  { key: 'anke', label: '暗刻红中', fan: 2 },
-  { key: 'minggang', label: '明杠红中', fan: 3 },
-  { key: 'anggang', label: '暗杠红中', fan: 4 },
+  { key: 'peng', label: '碰', fan: 1 },
+  { key: 'anke', label: '暗刻', fan: 2 },
+  { key: 'minggang', label: '明杠', fan: 3 },
+  { key: 'anggang', label: '暗杠', fan: 4 },
 ];
 
 const BAIBAN_OPTIONS = [
   { key: 'none', label: '无', fan: 0 },
-  { key: 'peng', label: '碰白板', fan: 1 },
-  { key: 'anke', label: '暗刻白板', fan: 2 },
-  { key: 'minggang', label: '明杠白板', fan: 3 },
-  { key: 'anggang', label: '暗杠白板', fan: 4 },
+  { key: 'peng', label: '碰', fan: 1 },
+  { key: 'anke', label: '暗刻', fan: 2 },
+  { key: 'minggang', label: '明杠', fan: 3 },
+  { key: 'anggang', label: '暗杠', fan: 4 },
 ];
 
+// 门前清（单选）
 const MENQING_OPTIONS = [
   { key: 'none', label: '无', fan: 0 },
   { key: 'menqianqing', label: '门前清', fan: 1 },
-  { key: 'kadang', label: '卡档', fan: 1 },
+];
+
+// 听牌型（卡当/边张/单吊 三选一）
+const TINGPAI_OPTIONS = [
+  { key: 'kadang', label: '卡当', fan: 1 },
   { key: 'bianzhang', label: '边张', fan: 1 },
   { key: 'diandiao', label: '单吊', fan: 1 },
 ];
-
-// 大牌组合：basicType 多选配对 → 额外 +15 番
-const COMBO_OPTIONS = [
-  { key: 'qingyise_pengpenghu', label: '清一色·碰碰胡' },
-  { key: 'hunyise_pengpenghu', label: '混一色·碰碰胡' },
-  { key: 'qingyise_qiyidui', label: '清一色·七对' },
-  { key: 'hunyise_qiyidui', label: '混一色·七对' },
-];
-
-// 互斥：七一对/全求人 → 禁用门清与听牌型
-const DISABLE_MENQING_BASIC = ['qiyidui', 'quanqiuren'];
 
 // 与"门前清"冲突的字牌选项（碰、明杠影响门前清；暗刻、暗杠不影响）
 const HONOR_CONFLICTS_WITH_MENQING = ['peng', 'minggang'];
@@ -75,13 +81,10 @@ Page({
     baseScore: 1,
     totalFan: 0,
     canHu: false,
-    canHuText: '请选择基础牌型和胡牌方式',
+    canHuText: '请选择牌型和胡牌方式',
 
-    basicTypes: BASIC_TYPES,
-    basicType: 'pinghu',
-
-    comboOptions: COMBO_OPTIONS,
-    combos: [],   // 多选：选中的 combo key 列表
+    cardTypes: CARD_TYPES,
+    cardTypeKeys: ['pinghu'],   // 多选：默认平胡
 
     winTypes: WIN_TYPES,
     winType: 'dianpao',
@@ -119,6 +122,10 @@ Page({
     menqing: null,
     menqingDisabled: false,
 
+    tingpaiOptions: TINGPAI_OPTIONS,
+    tingpaiType: null,
+    tingpaiDisabled: false,
+
     otherPlayers: [],
     targetId: '',
     targetName: '',
@@ -147,7 +154,6 @@ Page({
 
   onRuleTypeChange(e) {
     this.setData({ ruleTypeIndex: Number(e.detail.value) });
-    // 当前只有 1 个选项，无需重置数据
   },
 
   onBaseScoreChange(e) {
@@ -158,38 +164,55 @@ Page({
     }
   },
 
-  onBasicTypeChange(e) {
+  // 牌型多选 + 互斥
+  onCardTypeChange(e) {
     const value = e.currentTarget.dataset.value;
-    const newType = (this.data.basicType === value) ? null : value;  // 再次点击取消
-    // 互斥：七一对/全求人 → 清空门清 + 禁用
-    if (newType && DISABLE_MENQING_BASIC.includes(newType)) {
-      this.setData({ basicType: newType, menqing: null, menqingDisabled: true });
+    const cur = this.data.cardTypeKeys || [];
+    let next;
+    if (cur.includes(value)) {
+      // 取消选中
+      next = cur.filter(k => k !== value);
     } else {
-      this.setData({ basicType: newType, menqingDisabled: false });
+      // 选中
+      next = [...cur, value];
+      if (PRIMARY_CARDS.includes(value)) {
+        // 选 1番 primary → 只保留这一个
+        next = [value];
+      } else {
+        // 选 15+番 → 清掉所有 primary
+        next = next.filter(k => !PRIMARY_CARDS.includes(k));
+        // 七对↔碰碰胡、清↔混 互斥
+        const rival = CARD_RIVAL[value];
+        if (rival && next.includes(rival)) {
+          next = next.filter(k => k !== rival);
+        }
+      }
     }
+
+    // 处理听牌型互斥（七对 → 清空+禁用；全求人 → 若单吊则清空）
+    let tingpai = this.data.tingpaiType;
+    let tingpaiDisabled = false;
+    if (next.includes('qiyidui')) {
+      tingpai = null;
+      tingpaiDisabled = true;
+    } else if (next.includes('quanqiuren') && tingpai === 'diandiao') {
+      tingpai = null;
+    }
+
+    this.setData({ cardTypeKeys: next, tingpai, tingpaiDisabled });
     this._recompute();
   },
 
   onWinTypeChange(e) {
     const value = e.currentTarget.dataset.value;
-    const newValue = (this.data.winType === value) ? null : value;  // 再次点击取消
+    const newValue = (this.data.winType === value) ? null : value;
     this.setData({ winType: newValue });
-    this._recompute();
-  },
-
-  onComboChange(e) {
-    const value = e.currentTarget.dataset.value;
-    const cur = this.data.combos || [];
-    const newCombos = cur.includes(value)
-      ? cur.filter(k => k !== value)
-      : [...cur, value];
-    this.setData({ combos: newCombos });
     this._recompute();
   },
 
   onFacaiChange(e) {
     const value = Number(e.currentTarget.dataset.value);
-    const newValue = (this.data.facai === value) ? 0 : value;  // 再次点击同值归 0
+    const newValue = (this.data.facai === value) ? 0 : value;
     this.setData({ facai: newValue });
     this._recompute();
   },
@@ -211,7 +234,7 @@ Page({
 
   onHongZhongChange(e) {
     const value = e.currentTarget.dataset.value;
-    const newValue = (this.data.hongZhong === value) ? null : value;  // 再次点击取消
+    const newValue = (this.data.hongZhong === value) ? null : value;
     this.setData({ hongZhong: newValue });
     this._applyMenqingMutex();
     this._recompute();
@@ -219,7 +242,7 @@ Page({
 
   onBaiBanChange(e) {
     const value = e.currentTarget.dataset.value;
-    const newValue = (this.data.baiBan === value) ? null : value;  // 再次点击取消
+    const newValue = (this.data.baiBan === value) ? null : value;
     this.setData({ baiBan: newValue });
     this._applyMenqingMutex();
     this._recompute();
@@ -228,19 +251,26 @@ Page({
   onMenqingChange(e) {
     if (this.data.menqingDisabled) return;
     const value = e.currentTarget.dataset.value;
-    const newValue = (this.data.menqing === value) ? null : value;  // 再次点击取消
+    const newValue = (this.data.menqing === value) ? null : value;
     if (newValue) {
-      // 选 menqing → 重置冲突项
       this.setData({
         menqing: newValue,
         hongZhong: null,
         baiBan: null,
-        mingGangCount: 0,
+        mingGang: 0,
       });
-      this._applyMenqingMutex();  // menqingDisabled 应回到 false
+      this._applyMenqingMutex();
     } else {
       this.setData({ menqing: null });
     }
+    this._recompute();
+  },
+
+  onTingpaiChange(e) {
+    if (this.data.tingpaiDisabled) return;
+    const value = e.currentTarget.dataset.value;
+    const newValue = (this.data.tingpaiType === value) ? null : value;
+    this.setData({ tingpaiType: newValue });
     this._recompute();
   },
 
@@ -251,28 +281,10 @@ Page({
     this._recompute();
   },
 
-  // 门前清互斥：碰红中/明杠红中/碰白板/明杠白板/明杠数牌≥1 → 禁用门前清
-  _applyMenqingMutex() {
-    const hzConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.hongZhong);
-    const bbConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.baiBan);
-    const mgConflicts = this.data.mingGang >= 1;
-    const shouldDisable = hzConflicts || bbConflicts || mgConflicts;
-    if (shouldDisable) {
-      if (!this.data.menqingDisabled || this.data.menqing !== null) {
-        this.setData({ menqingDisabled: true, menqing: null });
-      }
-    } else {
-      if (this.data.menqingDisabled) {
-        this.setData({ menqingDisabled: false });
-      }
-    }
-  },
-
   onReset() {
     this.setData({
       baseScore: 1,
-      basicType: 'pinghu',
-      combos: [],
+      cardTypeKeys: ['pinghu'],
       winType: 'dianpao',
       facai: 0,
       mingGang: 0,
@@ -281,6 +293,8 @@ Page({
       baiBan: null,
       menqing: null,
       menqingDisabled: false,
+      tingpaiType: null,
+      tingpaiDisabled: false,
       targetId: '',
       targetName: '',
     });
@@ -292,7 +306,6 @@ Page({
       wx.showToast({ title: this.data.canHu ? '请选付给谁' : '总番数不足2番，不能胡', icon: 'none' });
       return;
     }
-    // 手动 type 提交：scoreChanges = { winner: +amount, me: -amount }
     const amount = this.data.amount;
     const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
     const targetId = this.data.targetId;
@@ -316,17 +329,38 @@ Page({
     }).catch(err => { wx.hideLoading(); handleError(err, this); });
   },
 
+  // 门前清互斥：碰红中/明杠红中/碰白板/明杠白板/明杠数牌≥1 → 禁用门前清
+  _applyMenqingMutex() {
+    const hzConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.hongZhong);
+    const bbConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.baiBan);
+    const mgConflicts = this.data.mingGang >= 1;
+    const shouldDisable = hzConflicts || bbConflicts || mgConflicts;
+    if (shouldDisable) {
+      if (!this.data.menqingDisabled || this.data.menqing !== null) {
+        this.setData({ menqingDisabled: true, menqing: null });
+      }
+    } else {
+      if (this.data.menqingDisabled) {
+        this.setData({ menqingDisabled: false });
+      }
+    }
+  },
+
   // 计算番数 + 金额 + 可胡 + 可应用
   _recompute() {
     const breakdown = [];
 
-    // 1) 基础牌型
-    const basic = _find(BASIC_TYPES, this.data.basicType);
-    if (basic && basic.fan > 0) breakdown.push({ name: basic.label, fan: basic.fan });
+    // 1) 牌型（多选）
+    for (const key of (this.data.cardTypeKeys || [])) {
+      const c = _find(CARD_TYPES, key);
+      if (c && c.fan > 0) breakdown.push({ name: c.label, fan: c.fan });
+    }
 
     // 2) 胡牌方式
-    const win = _find(WIN_TYPES, this.data.winType);
-    if (win && win.fan > 0) breakdown.push({ name: win.label, fan: win.fan });
+    if (this.data.winType) {
+      const win = _find(WIN_TYPES, this.data.winType);
+      if (win && win.fan > 0) breakdown.push({ name: win.label, fan: win.fan });
+    }
 
     // 3) 发财
     if (this.data.facai > 0) {
@@ -345,23 +379,23 @@ Page({
     // 5) 红中 / 白板
     if (this.data.hongZhong) {
       const hz = _find(HONGZHONG_OPTIONS, this.data.hongZhong);
-      if (hz && hz.fan > 0) breakdown.push({ name: hz.label, fan: hz.fan });
+      if (hz && hz.fan > 0) breakdown.push({ name: `红中·${hz.label}`, fan: hz.fan });
     }
     if (this.data.baiBan) {
       const bb = _find(BAIBAN_OPTIONS, this.data.baiBan);
-      if (bb && bb.fan > 0) breakdown.push({ name: bb.label, fan: bb.fan });
+      if (bb && bb.fan > 0) breakdown.push({ name: `白板·${bb.label}`, fan: bb.fan });
     }
 
-    // 6) 门清与听牌型
+    // 6) 门前清
     if (!this.data.menqingDisabled && this.data.menqing) {
       const mq = _find(MENQING_OPTIONS, this.data.menqing);
       if (mq && mq.fan > 0) breakdown.push({ name: mq.label, fan: mq.fan });
     }
 
-    // 7) 大牌组合：用户多选 → 每选一个 +15 番
-    for (const key of (this.data.combos || [])) {
-      const combo = _find(COMBO_OPTIONS, key);
-      if (combo) breakdown.push({ name: combo.label, fan: 15 });
+    // 7) 听牌型
+    if (!this.data.tingpaiDisabled && this.data.tingpaiType) {
+      const tp = _find(TINGPAI_OPTIONS, this.data.tingpaiType);
+      if (tp && tp.fan > 0) breakdown.push({ name: tp.label, fan: tp.fan });
     }
 
     const totalFan = breakdown.reduce((s, x) => s + x.fan, 0);

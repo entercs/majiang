@@ -21,7 +21,12 @@
 .section { background: #fff; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .section-disabled { opacity: 0.6; }
 .section-title { font-size: 28rpx; font-weight: 600; color: #333; margin-bottom: 16rpx; }
-.disabled-hint { color: #7A7E83; font-size: 24rpx; }
+.disabled-hint { color: #7A7E83; font-size: 24rpx; padding: 8rpx 0 0; }
+
+/* 子区段（红中/白板/各计数器） */
+.sub-section { padding: 12rpx 0; border-bottom: 1rpx dashed #f0f0f0; }
+.sub-section:last-child { border-bottom: none; }
+.sub-title { font-size: 26rpx; color: #7A7E83; margin-bottom: 12rpx; }
 
 /* 子区段（红中/白板各一） */
 .sub-section { margin-bottom: 12rpx; }
@@ -53,10 +58,8 @@
 .chip-grid.disabled .chip:active { opacity: 0.4; }  /* 禁用时点不动 */
 .chip:active { opacity: 0.7; }
 
-/* 计数器（chip 形式） */
-.counter-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #f0f0f0; gap: 16rpx; }
-.counter-row:last-child { border-bottom: none; }
-.counter-label { width: 100rpx; flex-shrink: 0; font-size: 28rpx; color: #333; }
+/* 计数器样式已废弃：现在用 chip-grid compact 替代 */
+.counter-row { display: none; }
 
 /* chip 标签网格（紧凑版） */
 .chip-grid.compact { gap: 8rpx; flex: 1; }
