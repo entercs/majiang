@@ -9,20 +9,22 @@ const RULE_TYPES = ['黄梅麻将'];
 
 // 牌型（原"基础牌型"），多选带互斥
 const CARD_TYPES = [
-  { key: 'pinghu', label: '平胡', fan: 1 },
-  { key: 'qiyidui', label: '七对', fan: 15 },
-  { key: 'pengpenghu', label: '碰碰胡', fan: 15 },
-  { key: 'qingyise', label: '清一色', fan: 15 },
-  { key: 'hunyise', label: '混一色', fan: 15 },
-  { key: 'quanqiuren', label: '全求人', fan: 30 },
+  { key: 'pinghu', label: '平胡', fan: 1 },         // primary：与十五番互斥
+  { key: 'qiyidui', label: '七对', fan: 15 },       // 十五番：与碰碰胡互斥
+  { key: 'pengpenghu', label: '碰碰胡', fan: 15 },  // 十五番：与七对互斥
+  { key: 'qingyise', label: '清一色', fan: 15 },     // 十五番：与混一色互斥
+  { key: 'hunyise', label: '混一色', fan: 15 },     // 十五番：与清一色互斥
+  { key: 'quanqiuren', label: '全求人', fan: 30 },   // 十五番：可与七对/清一色等共存
 ];
 
 // 1番 primary 组（与十五番互斥）
 const PRIMARY_CARDS = ['pinghu'];
-// 十五番内部互斥对（清混一色 互不互斥）
+// 十五番内部互斥对
 const CARD_RIVAL = {
   qiyidui: 'pengpenghu',
   pengpenghu: 'qiyidui',
+  qingyise: 'hunyise',
+  hunyise: 'qingyise',
 };
 
 const WIN_TYPES = [
@@ -78,7 +80,8 @@ Page({
     canHuText: '请选择牌型和胡牌方式',
 
     cardTypes: CARD_TYPES,
-    cardTypeSelected: { pinghu: true },   // 映射表：键为牌型 key，true=已选
+    cardTypeKeys: ['pinghu'],   // 多选：默认平胡
+    cardTypeSelected: { pinghu: true },
 
     winTypes: WIN_TYPES,
     winType: 'dianpao',
@@ -155,28 +158,33 @@ Page({
   // 牌型多选 + 互斥
   onCardTypeChange(e) {
     const value = e.currentTarget.dataset.value;
-    const cur = { ...(this.data.cardTypeSelected || {}) };
-
-    if (cur[value]) {
+    const cur = this.data.cardTypeKeys || [];
+    let next;
+    if (cur.includes(value)) {
       // 取消选中
-      delete cur[value];
+      next = cur.filter(k => k !== value);
     } else {
       // 选中
+      next = [...cur, value];
       if (PRIMARY_CARDS.includes(value)) {
-        // 选 1番 primary → 清空其他，只留这一个
-        Object.keys(cur).forEach(k => { delete cur[k]; });
-        cur[value] = true;
+        // 选 1番 primary → 只保留这一个
+        next = [value];
       } else {
         // 选 15+番 → 清掉所有 primary
-        PRIMARY_CARDS.forEach(k => { delete cur[k]; });
-        // 七对↔碰碰胡 互斥
+        next = next.filter(k => !PRIMARY_CARDS.includes(k));
+        // 七对↔碰碰胡、清↔混 互斥
         const rival = CARD_RIVAL[value];
-        if (rival) delete cur[rival];
-        cur[value] = true;
+        if (rival && next.includes(rival)) {
+          next = next.filter(k => k !== rival);
+        }
       }
     }
 
-    this.setData({ cardTypeSelected: cur });
+    // 构建选中映射表（WXML 不支持 indexOf，用属性访问代替）
+    const cardTypeSelected = {};
+    CARD_TYPES.forEach(t => { cardTypeSelected[t.key] = next.includes(t.key); });
+
+    this.setData({ cardTypeKeys: next, cardTypeSelected });
     this._applyQmMutex();
     this._recompute();
   },
@@ -256,6 +264,7 @@ Page({
   onReset() {
     this.setData({
       baseScore: 1,
+      cardTypeKeys: ['pinghu'],
       cardTypeSelected: { pinghu: true },
       winType: 'dianpao',
       facai: null,
@@ -306,12 +315,12 @@ Page({
   //  清一色/混一色 → 本身不互斥，由其底层结构决定规则
   //  门前清       → 与碰红中/明杠红中/碰白板/明杠白板/明杠数牌≥1 互斥
   _applyQmMutex() {
-    const sel = this.data.cardTypeSelected || {};
-    const hasQiyidui = !!sel.qiyidui;
-    const hasPengpenghu = !!sel.pengpenghu;
-    const hasQuanqiuren = !!sel.quanqiuren;
+    const keys = this.data.cardTypeKeys || [];
+    const hasQiyidui = keys.includes('qiyidui');
+    const hasPengpenghu = keys.includes('pengpenghu');
+    const hasQuanqiuren = keys.includes('quanqiuren');
 
-    // 门前清与字牌冲突
+    // 门前清与字牌冲突（不变）
     const hzConflict = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.hongZhong);
     const bbConflict = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.baiBan);
     const mgConflict = this.data.mingGang != null;
@@ -359,12 +368,10 @@ Page({
   _recompute() {
     const breakdown = [];
 
-    // 1) 牌型（多选，从映射表读）
-    const cardSel = this.data.cardTypeSelected || {};
-    for (const card of CARD_TYPES) {
-      if (cardSel[card.key] && card.fan > 0) {
-        breakdown.push({ name: card.label, fan: card.fan });
-      }
+    // 1) 牌型（多选）
+    for (const key of (this.data.cardTypeKeys || [])) {
+      const c = _find(CARD_TYPES, key);
+      if (c && c.fan > 0) breakdown.push({ name: c.label, fan: c.fan });
     }
 
     // 2) 胡牌方式
