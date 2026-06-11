@@ -1,35 +1,158 @@
 <view class="auto-score">
-  <view class="section">
-    <view class="section-title">1. 我要付给谁</view>
-    <view class="players-row">
-      <block wx:for="{{otherPlayers}}" wx:key="_id">
-        <view class="player-card {{targetId === item._id ? 'selected' : ''}}" bind:tap="onSelectTarget" data-id="{{item._id}}">
-          <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
-          <text class="nick">{{item.nickname}}</text>
+  <!-- 顶栏：玩法 + 底分 -->
+  <view class="topbar">
+    <view class="topbar-item">
+      <text class="topbar-label">玩法</text>
+      <picker mode="selector" range="{{ruleTypes}}" value="{{ruleTypeIndex}}" bindchange="onRuleTypeChange">
+        <view class="picker-value">
+          <text>{{ruleTypes[ruleTypeIndex]}}</text>
+          <text class="arrow">▾</text>
         </view>
-      </block>
+      </picker>
+    </view>
+    <view class="topbar-item">
+      <text class="topbar-label">底分</text>
+      <input class="topbar-input" type="number" value="{{baseScore}}" bindinput="onBaseScoreChange" />
     </view>
   </view>
 
+  <!-- 总番数大展示 -->
+  <view class="total-card {{canHu ? 'can-hu' : 'cannot-hu'}}">
+    <view class="total-row">
+      <text class="total-num">{{totalFan}}</text>
+      <text class="total-unit">番</text>
+    </view>
+    <view class="can-hu-text">{{canHuText}}</view>
+  </view>
+
+  <!-- 基础牌型 -->
   <view class="section">
-    <view class="section-title">2. 怎么胡的</view>
-    <view class="types">
-      <view class="type-item {{winType === 'zimo' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="zimo">
-        <text>自摸</text>
+    <view class="section-title">基础牌型</view>
+    <view class="radio-grid">
+      <label wx:for="{{basicTypes}}" wx:key="key" class="radio-item">
+        <radio value="{{item.key}}" checked="{{basicType === item.key}}" color="#1aad19" bindtap="onBasicTypeChange" data-value="{{item.key}}" />
+        <text class="radio-label">{{item.label}} ({{item.fan}}番)</text>
+      </label>
+    </view>
+  </view>
+
+  <!-- 胡牌方式 -->
+  <view class="section">
+    <view class="section-title">胡牌方式</view>
+    <view class="radio-grid">
+      <label wx:for="{{winTypes}}" wx:key="key" class="radio-item">
+        <radio value="{{item.key}}" checked="{{winType === item.key}}" color="#1aad19" bindtap="onWinTypeChange" data-value="{{item.key}}" />
+        <text class="radio-label">{{item.label}} ({{item.fan}}番)</text>
+      </label>
+    </view>
+  </view>
+
+  <!-- 发财 / 杠数量 -->
+  <view class="section">
+    <view class="section-title">字牌与杠牌</view>
+    <view class="counter-row">
+      <text class="counter-label">发财</text>
+      <view class="counter-buttons">
+        <button class="counter-btn" bindtap="onFacaiMinus" disabled="{{facaiCount === 0}}">-</button>
+        <text class="counter-value">{{facaiCount}}</text>
+        <button class="counter-btn" bindtap="onFacaiPlus" disabled="{{facaiCount === 4}}">+</button>
       </view>
-      <view class="type-item {{winType === 'dianpao' ? 'selected' : ''}}" bind:tap="onSelectWinType" data-type="dianpao">
-        <text>点炮</text>
+      <text class="counter-hint">1-3张=数量×1，4张=8番</text>
+    </view>
+    <view class="counter-row">
+      <text class="counter-label">明杠数牌</text>
+      <view class="counter-buttons">
+        <button class="counter-btn" bindtap="onMingGangMinus" disabled="{{mingGangCount === 0}}">-</button>
+        <text class="counter-value">{{mingGangCount}}</text>
+        <button class="counter-btn" bindtap="onMingGangPlus" disabled="{{mingGangCount === 3}}">+</button>
+      </view>
+      <text class="counter-hint">×1番</text>
+    </view>
+    <view class="counter-row">
+      <text class="counter-label">暗杠数牌</text>
+      <view class="counter-buttons">
+        <button class="counter-btn" bindtap="onAnGangMinus" disabled="{{anGangCount === 0}}">-</button>
+        <text class="counter-value">{{anGangCount}}</text>
+        <button class="counter-btn" bindtap="onAnGangPlus" disabled="{{anGangCount === 3}}">+</button>
+      </view>
+      <text class="counter-hint">×2番</text>
+    </view>
+  </view>
+
+  <!-- 红中 -->
+  <view class="section">
+    <view class="section-title">红中</view>
+    <view class="radio-grid">
+      <label wx:for="{{hongZhongOptions}}" wx:key="key" class="radio-item">
+        <radio value="{{item.key}}" checked="{{hongZhong === item.key}}" color="#1aad19" bindtap="onHongZhongChange" data-value="{{item.key}}" />
+        <text class="radio-label">{{item.label}}{{item.fan > 0 ? ' (' + item.fan + '番)' : ''}}</text>
+      </label>
+    </view>
+  </view>
+
+  <!-- 白板 -->
+  <view class="section">
+    <view class="section-title">白板</view>
+    <view class="radio-grid">
+      <label wx:for="{{baiBanOptions}}" wx:key="key" class="radio-item">
+        <radio value="{{item.key}}" checked="{{baiBan === item.key}}" color="#1aad19" bindtap="onBaiBanChange" data-value="{{item.key}}" />
+        <text class="radio-label">{{item.label}}{{item.fan > 0 ? ' (' + item.fan + '番)' : ''}}</text>
+      </label>
+    </view>
+  </view>
+
+  <!-- 门清与听牌型 -->
+  <view class="section" wx:if="{{!menqingDisabled}}">
+    <view class="section-title">门清与听牌型 (最多1个)</view>
+    <view class="radio-grid">
+      <label wx:for="{{menqingOptions}}" wx:key="key" class="radio-item">
+        <radio value="{{item.key}}" checked="{{menqing === item.key}}" color="#1aad19" bindtap="onMenqingChange" data-value="{{item.key}}" />
+        <text class="radio-label">{{item.label}}{{item.fan > 0 ? ' (' + item.fan + '番)' : ''}}</text>
+      </label>
+    </view>
+  </view>
+  <view class="section section-disabled" wx:else>
+    <view class="section-title">门清与听牌型</view>
+    <view class="disabled-hint">（七一对/全求人不兼容门清）</view>
+  </view>
+
+  <!-- 番数明细 -->
+  <view class="section breakdown">
+    <view class="section-title">番数明细</view>
+    <view wx:if="{{fanBreakdown.length === 0}}" class="empty-hint">（尚无生效番型）</view>
+    <view class="breakdown-row" wx:for="{{fanBreakdown}}" wx:key="name">
+      <text class="bd-name">{{item.name}}</text>
+      <text class="bd-fan">+{{item.fan}} 番</text>
+    </view>
+    <view class="breakdown-total">
+      <text>合计</text>
+      <text class="bd-fan-total">{{totalFan}} 番</text>
+    </view>
+  </view>
+
+  <!-- 付给谁 -->
+  <view class="section">
+    <view class="section-title">我付给谁</view>
+    <view wx:if="{{otherPlayers.length === 0}}" class="empty-hint">房间里没有其他玩家</view>
+    <view class="players-grid" wx:else>
+      <view wx:for="{{otherPlayers}}" wx:key="_id"
+            class="player-card {{targetId === item._id ? 'selected' : ''}}"
+            bindtap="onTargetChange" data-id="{{item._id}}">
+        <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+        <text class="nick">{{item.nickname}}</text>
       </view>
     </view>
   </view>
 
-  <view class="preview-card" wx:if="{{targetId && winType}}">
+  <!-- 预览 + 操作 -->
+  <view class="preview-card" wx:if="{{canApply}}">
     <view class="preview-text">你付给 <text class="preview-name">{{targetName}}</text></view>
     <view class="preview-amount">{{amount}} <text class="preview-unit">分</text></view>
-    <view class="preview-meta">（{{winTypeLabel}} · 1 番）</view>
+    <view class="preview-meta">（{{totalFan}} 番 × {{baseScore}} 底分）</view>
   </view>
 
   <view class="footer">
-    <view class="btn primary {{canApply ? '' : 'disabled'}}" bind:tap="onApply">应用</view>
+    <view class="btn default" bindtap="onReset">重置</view>
+    <view class="btn primary {{canApply ? '' : 'disabled'}}" bindtap="onApply">应用</view>
   </view>
 </view>
