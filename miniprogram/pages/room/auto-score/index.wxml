@@ -37,6 +37,18 @@
     </view>
   </view>
 
+  <!-- 组合牌型（多选） -->
+  <view class="section">
+    <view class="section-title">组合牌型（多选，各+15番）</view>
+    <view class="chip-grid">
+      <view wx:for="{{comboOptions}}" wx:key="key"
+            class="chip {{combos.indexOf(item.key) >= 0 ? 'selected' : ''}}"
+            bindtap="onComboChange" data-value="{{item.key}}">
+        {{item.label}}
+      </view>
+    </view>
+  </view>
+
   <!-- 胡牌方式 -->
   <view class="section">
     <view class="section-title">胡牌方式</view>

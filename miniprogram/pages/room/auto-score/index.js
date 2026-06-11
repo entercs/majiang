@@ -50,11 +50,11 @@ const MENQING_OPTIONS = [
 ];
 
 // 大牌组合：basicType 多选配对 → 额外 +15 番
-const BIG_HAND_BONUSES = [
-  { items: ['qingyise', 'pengpenghu'], name: '清一色·碰碰胡' },
-  { items: ['hunyise', 'pengpenghu'], name: '混一色·碰碰胡' },
-  { items: ['qingyise', 'qiyidui'], name: '清一色·七一对' },
-  { items: ['hunyise', 'qiyidui'], name: '混一色·七一对' },
+const COMBO_OPTIONS = [
+  { key: 'qingyise_pengpenghu', label: '清一色·碰碰胡' },
+  { key: 'hunyise_pengpenghu', label: '混一色·碰碰胡' },
+  { key: 'qingyise_qiyidui', label: '清一色·七对' },
+  { key: 'hunyise_qiyidui', label: '混一色·七对' },
 ];
 
 // 互斥：七一对/全求人 → 禁用门清与听牌型
@@ -79,6 +79,9 @@ Page({
 
     basicTypes: BASIC_TYPES,
     basicType: 'pinghu',
+
+    comboOptions: COMBO_OPTIONS,
+    combos: [],   // 多选：选中的 combo key 列表
 
     winTypes: WIN_TYPES,
     winType: 'dianpao',
@@ -174,6 +177,16 @@ Page({
     this._recompute();
   },
 
+  onComboChange(e) {
+    const value = e.currentTarget.dataset.value;
+    const cur = this.data.combos || [];
+    const newCombos = cur.includes(value)
+      ? cur.filter(k => k !== value)
+      : [...cur, value];
+    this.setData({ combos: newCombos });
+    this._recompute();
+  },
+
   onFacaiChange(e) {
     const value = Number(e.currentTarget.dataset.value);
     const newValue = (this.data.facai === value) ? 0 : value;  // 再次点击同值归 0
@@ -259,6 +272,7 @@ Page({
     this.setData({
       baseScore: 1,
       basicType: 'pinghu',
+      combos: [],
       winType: 'dianpao',
       facai: 0,
       mingGang: 0,
@@ -344,24 +358,15 @@ Page({
       if (mq && mq.fan > 0) breakdown.push({ name: mq.label, fan: mq.fan });
     }
 
-    // 7) 大牌组合：基础牌型组合 → 额外 +15
-    const basicKey = this.data.basicType;
-    for (const combo of BIG_HAND_BONUSES) {
-      if (combo.items.includes(basicKey)) {
-        // 也需要对方的 basicType 吗？实际上大牌组合是两个基础牌型都是 15 番的组合
-        // 用户可能只选了一个基础牌型？不会——基础牌型是单选
-        // 所以这里改成：单选 + 大牌组合检测 → 检测所有"单选"是否触发多个 15 番基础牌型
-      }
+    // 7) 大牌组合：用户多选 → 每选一个 +15 番
+    for (const key of (this.data.combos || [])) {
+      const combo = _find(COMBO_OPTIONS, key);
+      if (combo) breakdown.push({ name: combo.label, fan: 15 });
     }
-    // 重新设计：基础牌型是单选（只能选 1 个），所以大牌组合需要从"单选 + 字牌状态"等组合判断
-    // 实际上 need.md 里的"清一色+碰碰胡"等是同时选中两个牌型，但当前设计是单选
-    // → 大牌组合暂不实现（等用户改设计）
 
     const totalFan = breakdown.reduce((s, x) => s + x.fan, 0);
     const canHu = totalFan >= 2;
-    const canHuText = canHu
-      ? '✅ 可胡牌'
-      : (totalFan === 0 ? '请选择基础牌型和胡牌方式' : '❌ 总番数不足2番');
+    const canHuText = canHu ? '✅ 可胡牌' : '❌ 不可胡牌（总番数不足2番）';
 
     const amount = totalFan * (this.data.baseScore || 0);
     const canApply = canHu && !!this.data.targetId;
