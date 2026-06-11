@@ -9,7 +9,7 @@ const RULE_TYPES = ['黄梅麻将'];
 
 const BASIC_TYPES = [
   { key: 'pinghu', label: '平胡', fan: 1 },
-  { key: 'qiyidui', label: '七一对', fan: 15 },
+  { key: 'qiyidui', label: '七对', fan: 15 },
   { key: 'pengpenghu', label: '碰碰胡', fan: 15 },
   { key: 'qingyise', label: '清一色', fan: 15 },
   { key: 'hunyise', label: '混一色', fan: 15 },
@@ -83,9 +83,28 @@ Page({
     winTypes: WIN_TYPES,
     winType: 'dianpao',
 
-    facaiCount: 0,
-    mingGangCount: 0,
-    anGangCount: 0,
+    facaiOptions: [
+      { key: 0, label: '0张' },
+      { key: 1, label: '1张' },
+      { key: 2, label: '2张' },
+      { key: 3, label: '3张' },
+      { key: 4, label: '4张' },
+    ],
+    facai: 0,
+    mingGangOptions: [
+      { key: 0, label: '0张' },
+      { key: 1, label: '1张' },
+      { key: 2, label: '2张' },
+      { key: 3, label: '3张' },
+    ],
+    mingGang: 0,
+    anGangOptions: [
+      { key: 0, label: '0张' },
+      { key: 1, label: '1张' },
+      { key: 2, label: '2张' },
+      { key: 3, label: '3张' },
+    ],
+    anGang: 0,
 
     hongZhongOptions: HONGZHONG_OPTIONS.filter(o => o.key !== 'none'),
     hongZhong: null,
@@ -155,33 +174,26 @@ Page({
     this._recompute();
   },
 
-  onFacaiMinus() {
-    if (this.data.facaiCount > 0) this.setData({ facaiCount: this.data.facaiCount - 1 }, () => this._recompute());
-  },
-  onFacaiPlus() {
-    if (this.data.facaiCount < 4) this.setData({ facaiCount: this.data.facaiCount + 1 }, () => this._recompute());
-  },
-
-  onMingGangMinus() {
-    if (this.data.mingGangCount > 0) {
-      this.setData({ mingGangCount: this.data.mingGangCount - 1 });
-      this._applyMenqingMutex();
-      this._recompute();
-    }
-  },
-  onMingGangPlus() {
-    if (this.data.mingGangCount < 3) {
-      this.setData({ mingGangCount: this.data.mingGangCount + 1 });
-      this._applyMenqingMutex();
-      this._recompute();
-    }
+  onFacaiChange(e) {
+    const value = Number(e.currentTarget.dataset.value);
+    const newValue = (this.data.facai === value) ? 0 : value;  // 再次点击同值归 0
+    this.setData({ facai: newValue });
+    this._recompute();
   },
 
-  onAnGangMinus() {
-    if (this.data.anGangCount > 0) this.setData({ anGangCount: this.data.anGangCount - 1 }, () => this._recompute());
+  onMingGangChange(e) {
+    const value = Number(e.currentTarget.dataset.value);
+    const newValue = (this.data.mingGang === value) ? 0 : value;
+    this.setData({ mingGang: newValue });
+    this._applyMenqingMutex();
+    this._recompute();
   },
-  onAnGangPlus() {
-    if (this.data.anGangCount < 3) this.setData({ anGangCount: this.data.anGangCount + 1 }, () => this._recompute());
+
+  onAnGangChange(e) {
+    const value = Number(e.currentTarget.dataset.value);
+    const newValue = (this.data.anGang === value) ? 0 : value;
+    this.setData({ anGang: newValue });
+    this._recompute();
   },
 
   onHongZhongChange(e) {
@@ -230,7 +242,7 @@ Page({
   _applyMenqingMutex() {
     const hzConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.hongZhong);
     const bbConflicts = HONOR_CONFLICTS_WITH_MENQING.includes(this.data.baiBan);
-    const mgConflicts = this.data.mingGangCount >= 1;
+    const mgConflicts = this.data.mingGang >= 1;
     const shouldDisable = hzConflicts || bbConflicts || mgConflicts;
     if (shouldDisable) {
       if (!this.data.menqingDisabled || this.data.menqing !== null) {
@@ -248,9 +260,9 @@ Page({
       baseScore: 1,
       basicType: 'pinghu',
       winType: 'dianpao',
-      facaiCount: 0,
-      mingGangCount: 0,
-      anGangCount: 0,
+      facai: 0,
+      mingGang: 0,
+      anGang: 0,
       hongZhong: null,
       baiBan: null,
       menqing: null,
@@ -303,18 +315,17 @@ Page({
     if (win && win.fan > 0) breakdown.push({ name: win.label, fan: win.fan });
 
     // 3) 发财
-    const facai = this.data.facaiCount;
-    if (facai > 0) {
-      const facaiFan = facai === 4 ? 8 : facai;
-      breakdown.push({ name: `发财×${facai}`, fan: facaiFan });
+    if (this.data.facai > 0) {
+      const facaiFan = this.data.facai === 4 ? 8 : this.data.facai;
+      breakdown.push({ name: `发财×${this.data.facai}`, fan: facaiFan });
     }
 
     // 4) 明杠 / 暗杠
-    if (this.data.mingGangCount > 0) {
-      breakdown.push({ name: `明杠数牌×${this.data.mingGangCount}`, fan: this.data.mingGangCount });
+    if (this.data.mingGang > 0) {
+      breakdown.push({ name: `明杠数牌×${this.data.mingGang}`, fan: this.data.mingGang });
     }
-    if (this.data.anGangCount > 0) {
-      breakdown.push({ name: `暗杠数牌×${this.data.anGangCount}`, fan: this.data.anGangCount * 2 });
+    if (this.data.anGang > 0) {
+      breakdown.push({ name: `暗杠数牌×${this.data.anGang}`, fan: this.data.anGang * 2 });
     }
 
     // 5) 红中 / 白板

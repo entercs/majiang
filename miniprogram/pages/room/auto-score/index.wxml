@@ -49,35 +49,38 @@
     </view>
   </view>
 
-  <!-- 字牌与杠牌 -->
+  <!-- 字牌与杠牌（chip 形式）-->
   <view class="section">
     <view class="section-title">字牌与杠牌</view>
     <view class="counter-row">
       <text class="counter-label">发财</text>
-      <view class="counter-buttons">
-        <button class="counter-btn" bindtap="onFacaiMinus" disabled="{{facaiCount === 0}}">-</button>
-        <text class="counter-value">{{facaiCount}}</text>
-        <button class="counter-btn" bindtap="onFacaiPlus" disabled="{{facaiCount === 4}}">+</button>
+      <view class="chip-grid compact">
+        <view wx:for="{{facaiOptions}}" wx:key="key"
+              class="chip compact-chip {{facai === item.key ? 'selected' : ''}}"
+              bindtap="onFacaiChange" data-value="{{item.key}}">
+          {{item.label}}
+        </view>
       </view>
-      <text class="counter-hint">1-3张=数量×1，4张=8番</text>
     </view>
     <view class="counter-row">
       <text class="counter-label">明杠数牌</text>
-      <view class="counter-buttons">
-        <button class="counter-btn" bindtap="onMingGangMinus" disabled="{{mingGangCount === 0}}">-</button>
-        <text class="counter-value">{{mingGangCount}}</text>
-        <button class="counter-btn" bindtap="onMingGangPlus" disabled="{{mingGangCount === 3}}">+</button>
+      <view class="chip-grid compact">
+        <view wx:for="{{mingGangOptions}}" wx:key="key"
+              class="chip compact-chip {{mingGang === item.key ? 'selected' : ''}}"
+              bindtap="onMingGangChange" data-value="{{item.key}}">
+          {{item.label}}
+        </view>
       </view>
-      <text class="counter-hint">×1番</text>
     </view>
     <view class="counter-row">
       <text class="counter-label">暗杠数牌</text>
-      <view class="counter-buttons">
-        <button class="counter-btn" bindtap="onAnGangMinus" disabled="{{anGangCount === 0}}">-</button>
-        <text class="counter-value">{{anGangCount}}</text>
-        <button class="counter-btn" bindtap="onAnGangPlus" disabled="{{anGangCount === 3}}">+</button>
+      <view class="chip-grid compact">
+        <view wx:for="{{anGangOptions}}" wx:key="key"
+              class="chip compact-chip {{anGang === item.key ? 'selected' : ''}}"
+              bindtap="onAnGangChange" data-value="{{item.key}}">
+          {{item.label}}
+        </view>
       </view>
-      <text class="counter-hint">×2番</text>
     </view>
   </view>
 

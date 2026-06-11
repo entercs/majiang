@@ -53,15 +53,14 @@
 .chip-grid.disabled .chip:active { opacity: 0.4; }  /* 禁用时点不动 */
 .chip:active { opacity: 0.7; }
 
-/* 计数器 */
+/* 计数器（chip 形式） */
 .counter-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #f0f0f0; gap: 16rpx; }
 .counter-row:last-child { border-bottom: none; }
-.counter-label { width: 140rpx; font-size: 28rpx; color: #333; }
-.counter-buttons { display: flex; align-items: center; gap: 8rpx; }
-.counter-btn { width: 40rpx; height: 40rpx; line-height: 40rpx; padding: 0; margin: 0; font-size: 26rpx; background: #f0f0f0; color: #333; border-radius: 8rpx; }
-.counter-btn[disabled] { background: #f8f8f8; color: #ccc; }
-.counter-value { width: 40rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: #333; }
-.counter-hint { font-size: 22rpx; color: #7A7E83; flex: 1; text-align: right; }
+.counter-label { width: 100rpx; flex-shrink: 0; font-size: 28rpx; color: #333; }
+
+/* chip 标签网格（紧凑版） */
+.chip-grid.compact { gap: 8rpx; flex: 1; }
+.chip.compact-chip { padding: 8rpx 16rpx; font-size: 24rpx; min-width: 0; }
 
 /* 番数明细 */
 .breakdown .empty-hint { color: #7A7E83; font-size: 26rpx; padding: 16rpx 0; }
