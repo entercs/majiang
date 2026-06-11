@@ -26,6 +26,15 @@
         <text class="base-score-value">{{baseScore}}</text>
       </view>
     </view>
+
+    <!-- 底分修改弹窗 -->
+    <base-score-popup
+      wx:if="{{baseScorePopupVisible}}"
+      initial-value="{{baseScore}}"
+      auto-focus="{{false}}"
+      bind:confirm="onBaseScoreConfirm"
+      bind:cancel="onBaseScoreCancel"
+    ></base-score-popup>
     <scroll-view class="rank-scroll" scroll-y>
       <view class="rank-list">
         <block wx:for="{{rankList}}" wx:key="_id">

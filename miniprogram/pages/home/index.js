@@ -53,7 +53,7 @@ function _ensureNickname() {
 }
 
 Page({
-  data: { loaded: true, myRooms: { active: [], finished: [] }, nickname: '' },
+  data: { loaded: true, myRooms: { active: [], finished: [] }, nickname: '', baseScorePopupVisible: false, pendingNickname: '' },
 
   onShow() {
     this._renderMyRooms();
@@ -88,16 +88,17 @@ Page({
 
   onCreateRoom() {
     const nickname = _ensureNickname();
-    this.setData({ nickname });
-    // 先选底分（1-5 快捷选项）
-    wx.showActionSheet({
-      itemList: ['底分 1', '底分 2', '底分 3', '底分 4', '底分 5'],
-      title: '选择底分',
-      success: (res) => {
-        const baseScore = res.tapIndex + 1;
-        this._doCreateRoom(nickname, baseScore);
-      },
-    });
+    this.setData({ nickname, pendingNickname: nickname, baseScorePopupVisible: true });
+  },
+
+  onBaseScoreConfirm(e) {
+    const baseScore = e.detail.value;
+    this.setData({ baseScorePopupVisible: false });
+    this._doCreateRoom(this.data.pendingNickname, baseScore);
+  },
+
+  onBaseScoreCancel() {
+    this.setData({ baseScorePopupVisible: false });
   },
 
   _doCreateRoom(nickname, baseScore) {

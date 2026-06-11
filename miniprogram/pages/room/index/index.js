@@ -14,6 +14,7 @@ Page({
     isOwner: false,
     currentPlayerId: '',
     baseScore: 1,
+    baseScorePopupVisible: false,
     syncStatus: 'connecting',
     syncText: '同步中...',
     popupVisible: false,
@@ -321,25 +322,27 @@ Page({
   },
 
   onTapBaseScore() {
-    wx.showActionSheet({
-      itemList: ['底分 1', '底分 2', '底分 3', '底分 4', '底分 5'],
-      title: '修改底分',
-      success: (res) => {
-        const baseScore = res.tapIndex + 1;
-        const newRule = { ...roomStore.rule, baseScore };
-        roomService.updateRule({ roomId: roomStore.roomId, rule: newRule })
-          .then((r) => {
-            if (r.code === 'OK') {
-              roomStore.setRule(newRule);
-              this.setData({ baseScore });
-              wx.showToast({ title: '已更新', icon: 'success', duration: 1000 });
-            } else {
-              handleError({ code: r.code, message: r.message }, this);
-            }
-          })
-          .catch(err => handleError(err, this));
-      },
-    });
+    this.setData({ baseScorePopupVisible: true });
+  },
+
+  onBaseScoreConfirm(e) {
+    const baseScore = e.detail.value;
+    const newRule = { ...roomStore.rule, baseScore };
+    this.setData({ baseScorePopupVisible: false, baseScore });
+    roomService.updateRule({ roomId: roomStore.roomId, rule: newRule })
+      .then((r) => {
+        if (r.code === 'OK') {
+          roomStore.setRule(newRule);
+          wx.showToast({ title: '已更新', icon: 'success', duration: 1000 });
+        } else {
+          handleError({ code: r.code, message: r.message }, this);
+        }
+      })
+      .catch(err => handleError(err, this));
+  },
+
+  onBaseScoreCancel() {
+    this.setData({ baseScorePopupVisible: false });
   },
 
   onFinishRoom() {

@@ -1,0 +1,30 @@
+<view class="mask" bind:tap="onMaskTap">
+  <view class="popup" catch:tap="noop">
+    <view class="title">设定底分</view>
+
+    <view class="stepper-row">
+      <view class="stepper-btn" bind:tap="onDec">−</view>
+      <input
+        class="stepper-input"
+        type="number"
+        value="{{value}}"
+        bindinput="onInput"
+        bindconfirm="onConfirm"
+        focus="{{autoFocus}}"
+      ></input>
+      <view class="stepper-btn" bind:tap="onInc">+</view>
+    </view>
+
+    <view class="quick-row">
+      <view class="quick-btn" bind:tap="onQuickTap" data-v="5">5</view>
+      <view class="quick-btn" bind:tap="onQuickTap" data-v="10">10</view>
+      <view class="quick-btn" bind:tap="onQuickTap" data-v="15">15</view>
+      <view class="quick-btn" bind:tap="onQuickTap" data-v="20">20</view>
+    </view>
+
+    <view class="btn-row">
+      <view class="btn cancel" bind:tap="onCancel">取消</view>
+      <view class="btn confirm" bind:tap="onConfirm">确认</view>
+    </view>
+  </view>
+</view>

@@ -3,6 +3,15 @@
     <text class="title">胡了么</text>
   </view>
 
+  <!-- 底分选择弹窗 -->
+  <base-score-popup
+    wx:if="{{baseScorePopupVisible}}"
+    initial-value="{{1}}"
+    auto-focus="{{true}}"
+    bind:confirm="onBaseScoreConfirm"
+    bind:cancel="onBaseScoreCancel"
+  ></base-score-popup>
+
   <view class="profile" bindtap="onEditNickname">
     <image class="avatar" src="/images/avatars/avatar-{{avatarIndex || 0}}.png" mode="aspectFit"></image>
     <text class="nick">{{nickname || '点击设置昵称'}}</text>
