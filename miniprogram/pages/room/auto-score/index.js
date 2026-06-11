@@ -84,14 +84,14 @@ Page({
     mingGangCount: 0,
     anGangCount: 0,
 
-    hongZhongOptions: HONGZHONG_OPTIONS,
-    hongZhong: 'none',
+    hongZhongOptions: HONGZHONG_OPTIONS.filter(o => o.key !== 'none'),
+    hongZhong: null,
 
-    baiBanOptions: BAIBAN_OPTIONS,
-    baiBan: 'none',
+    baiBanOptions: BAIBAN_OPTIONS.filter(o => o.key !== 'none'),
+    baiBan: null,
 
-    menqingOptions: MENQING_OPTIONS,
-    menqing: 'none',
+    menqingOptions: MENQING_OPTIONS.filter(o => o.key !== 'none'),
+    menqing: null,
     menqingDisabled: false,
 
     otherPlayers: [],
@@ -134,10 +134,10 @@ Page({
   },
 
   onBasicTypeChange(e) {
-    const newType = e.detail.value;
+    const newType = e.currentTarget.dataset.value;
     // 互斥：七一对/全求人 → 清空门清 + 禁用
     if (DISABLE_MENQING_BASIC.includes(newType)) {
-      this.setData({ basicType: newType, menqing: 'none', menqingDisabled: true });
+      this.setData({ basicType: newType, menqing: null, menqingDisabled: true });
     } else {
       this.setData({ basicType: newType, menqingDisabled: false });
     }
@@ -145,7 +145,7 @@ Page({
   },
 
   onWinTypeChange(e) {
-    this.setData({ winType: e.detail.value });
+    this.setData({ winType: e.currentTarget.dataset.value });
     this._recompute();
   },
 
@@ -171,18 +171,18 @@ Page({
   },
 
   onHongZhongChange(e) {
-    this.setData({ hongZhong: e.detail.value });
+    this.setData({ hongZhong: e.currentTarget.dataset.value });
     this._recompute();
   },
 
   onBaiBanChange(e) {
-    this.setData({ baiBan: e.detail.value });
+    this.setData({ baiBan: e.currentTarget.dataset.value });
     this._recompute();
   },
 
   onMenqingChange(e) {
     if (this.data.menqingDisabled) return;
-    this.setData({ menqing: e.detail.value });
+    this.setData({ menqing: e.currentTarget.dataset.value });
     this._recompute();
   },
 
@@ -201,9 +201,9 @@ Page({
       facaiCount: 0,
       mingGangCount: 0,
       anGangCount: 0,
-      hongZhong: 'none',
-      baiBan: 'none',
-      menqing: 'none',
+      hongZhong: null,
+      baiBan: null,
+      menqing: null,
       menqingDisabled: false,
       targetId: '',
       targetName: '',
@@ -268,13 +268,17 @@ Page({
     }
 
     // 5) 红中 / 白板
-    const hz = _find(HONGZHONG_OPTIONS, this.data.hongZhong);
-    if (hz && hz.fan > 0) breakdown.push({ name: hz.label, fan: hz.fan });
-    const bb = _find(BAIBAN_OPTIONS, this.data.baiBan);
-    if (bb && bb.fan > 0) breakdown.push({ name: bb.label, fan: bb.fan });
+    if (this.data.hongZhong) {
+      const hz = _find(HONGZHONG_OPTIONS, this.data.hongZhong);
+      if (hz && hz.fan > 0) breakdown.push({ name: hz.label, fan: hz.fan });
+    }
+    if (this.data.baiBan) {
+      const bb = _find(BAIBAN_OPTIONS, this.data.baiBan);
+      if (bb && bb.fan > 0) breakdown.push({ name: bb.label, fan: bb.fan });
+    }
 
     // 6) 门清与听牌型
-    if (!this.data.menqingDisabled) {
+    if (!this.data.menqingDisabled && this.data.menqing) {
       const mq = _find(MENQING_OPTIONS, this.data.menqing);
       if (mq && mq.fan > 0) breakdown.push({ name: mq.label, fan: mq.fan });
     }

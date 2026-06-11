@@ -23,20 +23,41 @@
 .section-title { font-size: 28rpx; font-weight: 600; color: #333; margin-bottom: 16rpx; }
 .disabled-hint { color: #7A7E83; font-size: 24rpx; }
 
-/* radio 网格 */
-.radio-grid { display: flex; flex-direction: column; gap: 12rpx; }
-.radio-item { display: flex; align-items: center; gap: 12rpx; padding: 8rpx 0; }
-.radio-item radio { transform: scale(0.85); }
-.radio-label { font-size: 28rpx; color: #333; }
+/* 子区段（红中/白板各一） */
+.sub-section { margin-bottom: 12rpx; }
+.sub-section:last-child { margin-bottom: 0; }
+.sub-title { font-size: 26rpx; color: #7A7E83; margin-bottom: 12rpx; }
+
+/* chip 标签网格 */
+.chip-grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14rpx 24rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  color: #333;
+  background: #fff;
+  transition: all 0.15s;
+}
+.chip.selected {
+  border-color: #1aad19;
+  background: #f0f8e8;
+  color: #1aad19;
+  font-weight: 600;
+}
+.chip:active { opacity: 0.7; }
 
 /* 计数器 */
 .counter-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #f0f0f0; gap: 16rpx; }
 .counter-row:last-child { border-bottom: none; }
 .counter-label { width: 140rpx; font-size: 28rpx; color: #333; }
-.counter-buttons { display: flex; align-items: center; gap: 12rpx; }
-.counter-btn { width: 60rpx; height: 60rpx; line-height: 60rpx; padding: 0; margin: 0; font-size: 36rpx; background: #f0f0f0; color: #333; border-radius: 12rpx; }
+.counter-buttons { display: flex; align-items: center; gap: 8rpx; }
+.counter-btn { width: 40rpx; height: 40rpx; line-height: 40rpx; padding: 0; margin: 0; font-size: 26rpx; background: #f0f0f0; color: #333; border-radius: 8rpx; }
 .counter-btn[disabled] { background: #f8f8f8; color: #ccc; }
-.counter-value { width: 60rpx; text-align: center; font-size: 32rpx; font-weight: 600; color: #333; }
+.counter-value { width: 40rpx; text-align: center; font-size: 28rpx; font-weight: 600; color: #333; }
 .counter-hint { font-size: 22rpx; color: #7A7E83; flex: 1; text-align: right; }
 
 /* 番数明细 */

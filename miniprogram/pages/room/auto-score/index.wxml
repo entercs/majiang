@@ -28,26 +28,28 @@
   <!-- 基础牌型 -->
   <view class="section">
     <view class="section-title">基础牌型</view>
-    <view class="radio-grid">
-      <label wx:for="{{basicTypes}}" wx:key="key" class="radio-item">
-        <radio value="{{item.key}}" checked="{{basicType === item.key}}" color="#1aad19" bindtap="onBasicTypeChange" data-value="{{item.key}}" />
-        <text class="radio-label">{{item.label}} ({{item.fan}}番)</text>
-      </label>
+    <view class="chip-grid">
+      <view wx:for="{{basicTypes}}" wx:key="key"
+            class="chip {{basicType === item.key ? 'selected' : ''}}"
+            bindtap="onBasicTypeChange" data-value="{{item.key}}">
+        {{item.label}}
+      </view>
     </view>
   </view>
 
   <!-- 胡牌方式 -->
   <view class="section">
     <view class="section-title">胡牌方式</view>
-    <view class="radio-grid">
-      <label wx:for="{{winTypes}}" wx:key="key" class="radio-item">
-        <radio value="{{item.key}}" checked="{{winType === item.key}}" color="#1aad19" bindtap="onWinTypeChange" data-value="{{item.key}}" />
-        <text class="radio-label">{{item.label}} ({{item.fan}}番)</text>
-      </label>
+    <view class="chip-grid">
+      <view wx:for="{{winTypes}}" wx:key="key"
+            class="chip {{winType === item.key ? 'selected' : ''}}"
+            bindtap="onWinTypeChange" data-value="{{item.key}}">
+        {{item.label}}
+      </view>
     </view>
   </view>
 
-  <!-- 发财 / 杠数量 -->
+  <!-- 字牌与杠牌 -->
   <view class="section">
     <view class="section-title">字牌与杠牌</view>
     <view class="counter-row">
@@ -79,36 +81,40 @@
     </view>
   </view>
 
-  <!-- 红中 -->
+  <!-- 红中 + 白板（合并） -->
   <view class="section">
-    <view class="section-title">红中</view>
-    <view class="radio-grid">
-      <label wx:for="{{hongZhongOptions}}" wx:key="key" class="radio-item">
-        <radio value="{{item.key}}" checked="{{hongZhong === item.key}}" color="#1aad19" bindtap="onHongZhongChange" data-value="{{item.key}}" />
-        <text class="radio-label">{{item.label}}{{item.fan > 0 ? ' (' + item.fan + '番)' : ''}}</text>
-      </label>
+    <view class="section-title">红中 / 白板</view>
+    <view class="sub-section">
+      <view class="sub-title">红中</view>
+      <view class="chip-grid">
+        <view wx:for="{{hongZhongOptions}}" wx:key="key"
+              class="chip {{hongZhong === item.key ? 'selected' : ''}}"
+              bindtap="onHongZhongChange" data-value="{{item.key}}">
+          {{item.label}}
+        </view>
+      </view>
     </view>
-  </view>
-
-  <!-- 白板 -->
-  <view class="section">
-    <view class="section-title">白板</view>
-    <view class="radio-grid">
-      <label wx:for="{{baiBanOptions}}" wx:key="key" class="radio-item">
-        <radio value="{{item.key}}" checked="{{baiBan === item.key}}" color="#1aad19" bindtap="onBaiBanChange" data-value="{{item.key}}" />
-        <text class="radio-label">{{item.label}}{{item.fan > 0 ? ' (' + item.fan + '番)' : ''}}</text>
-      </label>
+    <view class="sub-section">
+      <view class="sub-title">白板</view>
+      <view class="chip-grid">
+        <view wx:for="{{baiBanOptions}}" wx:key="key"
+              class="chip {{baiBan === item.key ? 'selected' : ''}}"
+              bindtap="onBaiBanChange" data-value="{{item.key}}">
+          {{item.label}}
+        </view>
+      </view>
     </view>
   </view>
 
   <!-- 门清与听牌型 -->
   <view class="section" wx:if="{{!menqingDisabled}}">
     <view class="section-title">门清与听牌型 (最多1个)</view>
-    <view class="radio-grid">
-      <label wx:for="{{menqingOptions}}" wx:key="key" class="radio-item">
-        <radio value="{{item.key}}" checked="{{menqing === item.key}}" color="#1aad19" bindtap="onMenqingChange" data-value="{{item.key}}" />
-        <text class="radio-label">{{item.label}}{{item.fan > 0 ? ' (' + item.fan + '番)' : ''}}</text>
-      </label>
+    <view class="chip-grid">
+      <view wx:for="{{menqingOptions}}" wx:key="key"
+            class="chip {{menqing === item.key ? 'selected' : ''}}"
+            bindtap="onMenqingChange" data-value="{{item.key}}">
+        {{item.label}}
+      </view>
     </view>
   </view>
   <view class="section section-disabled" wx:else>
