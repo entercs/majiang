@@ -19,7 +19,13 @@
 
   <!-- 排行榜（可滚动，超出视口高度时滚动） -->
   <view class="rank-section">
-    <view class="rank-title">排行榜</view>
+    <view class="rank-header">
+      <view class="rank-title">排行榜</view>
+      <view class="base-score-badge" bindtap="onTapBaseScore">
+        <text class="base-score-label">底分</text>
+        <text class="base-score-value">{{baseScore}}</text>
+      </view>
+    </view>
     <scroll-view class="rank-scroll" scroll-y>
       <view class="rank-list">
         <block wx:for="{{rankList}}" wx:key="_id">

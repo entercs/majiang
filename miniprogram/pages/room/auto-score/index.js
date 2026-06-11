@@ -139,20 +139,13 @@ Page({
     const otherPlayers = roomStore.players
       .filter(p => p._id !== roomStore.currentPlayerId)
       .sort((a, b) => a.seatIndex - b.seatIndex);
-    this.setData({ otherPlayers });
+    const baseScore = roomStore.rule?.baseScore ?? 1;
+    this.setData({ otherPlayers, baseScore });
     this._recompute();
   },
 
   onRuleTypeChange(e) {
     this.setData({ ruleTypeIndex: Number(e.detail.value) });
-  },
-
-  onBaseScoreChange(e) {
-    const n = Number(e.detail.value);
-    if (Number.isFinite(n) && n >= 0) {
-      this.setData({ baseScore: n });
-      this._recompute();
-    }
   },
 
   // 牌型多选 + 互斥
@@ -263,7 +256,6 @@ Page({
 
   onReset() {
     this.setData({
-      baseScore: 1,
       cardTypeKeys: ['pinghu'],
       cardTypeSelected: { pinghu: true },
       winType: 'dianpao',

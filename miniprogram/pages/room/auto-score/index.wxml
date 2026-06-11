@@ -12,7 +12,7 @@
     </view>
     <view class="topbar-item">
       <text class="topbar-label">底分</text>
-      <input class="topbar-input" type="number" value="{{baseScore}}" bindinput="onBaseScoreChange" />
+      <text class="topbar-value">{{baseScore}}</text>
     </view>
   </view>
 

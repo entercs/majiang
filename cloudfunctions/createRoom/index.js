@@ -35,7 +35,7 @@ async function _deleteOldestPlayers(clientId, count) {
 
 exports.main = async (event, context) => {
   const { openid } = cloud.getWXContext();
-  const { nickname = '玩家', avatarIndex = 0, clientId } = event;
+  const { nickname = '玩家', avatarIndex = 0, clientId, baseScore = 1 } = event;
 
   // 1. Validate
   if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
@@ -106,8 +106,10 @@ exports.main = async (event, context) => {
 
   try {
     // 4. Create default rule
+    const defaultRule = getDefaultRule();
+    defaultRule.baseScore = Number(baseScore) || 1;
     const ruleRes = await db.collection('rules').add({
-      data: { ...getDefaultRule(), roomId: 'pending', createdAt: Date.now() }
+      data: { ...defaultRule, roomId: 'pending', createdAt: Date.now() }
     });
     const ruleId = ruleRes._id;
     await db.collection('rules').doc(ruleId).update({ data: { roomId: ruleId } });

@@ -7,6 +7,7 @@
 .picker-value { display: flex; align-items: center; justify-content: space-between; font-size: 30rpx; font-weight: 600; color: #333; }
 .picker-value .arrow { color: #7A7E83; font-size: 24rpx; }
 .topbar-input { font-size: 30rpx; font-weight: 600; color: #333; }
+.topbar-value { font-size: 30rpx; font-weight: 600; color: #1aad19; }
 
 /* 总番数大卡 */
 .total-card { border-radius: 16rpx; padding: 40rpx 24rpx; margin-bottom: 24rpx; text-align: center; color: #fff; transition: background 0.2s; }

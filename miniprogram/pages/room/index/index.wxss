@@ -17,7 +17,12 @@
 .score { font-size: 26rpx; font-weight: 700; margin-top: 4rpx; color: #333; }
 
 .rank-section { margin-top: 24rpx; background: #fff; border-radius: 12rpx; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.rank-title { font-size: 30rpx; font-weight: 600; color: #333; padding: 24rpx; border-bottom: 1rpx solid #f0f0f0; flex-shrink: 0; }
+.rank-header { display: flex; align-items: center; justify-content: space-between; padding: 24rpx; border-bottom: 1rpx solid #f0f0f0; flex-shrink: 0; }
+.rank-title { font-size: 30rpx; font-weight: 600; color: #333; }
+.base-score-badge { display: flex; align-items: center; gap: 8rpx; padding: 8rpx 20rpx; background: #f5f5f5; border-radius: 8rpx; }
+.base-score-label { font-size: 24rpx; color: #999; }
+.base-score-value { font-size: 28rpx; font-weight: 700; color: #1aad19; }
+.base-score-badge:active { background: #e0e0e0; }
 .rank-scroll { flex: 1; min-height: 0; }
 .rank-list { }
 .rank-row { display: flex; align-items: center; min-height: 96rpx; padding: 0 24rpx; border-bottom: 1rpx solid #f0f0f0; overflow: hidden; box-sizing: border-box; }

@@ -89,11 +89,24 @@ Page({
   onCreateRoom() {
     const nickname = _ensureNickname();
     this.setData({ nickname });
+    // 先选底分（1-5 快捷选项）
+    wx.showActionSheet({
+      itemList: ['底分 1', '底分 2', '底分 3', '底分 4', '底分 5'],
+      title: '选择底分',
+      success: (res) => {
+        const baseScore = res.tapIndex + 1;
+        this._doCreateRoom(nickname, baseScore);
+      },
+    });
+  },
+
+  _doCreateRoom(nickname, baseScore) {
     wx.showLoading({ title: '创建中...' });
     roomService.createRoom({
       nickname,
       avatarIndex: appStore.avatarIndex || 0,
       clientId: appStore.clientId,
+      baseScore,
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
