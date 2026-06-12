@@ -95,7 +95,7 @@
       <view class="sub-title">明杠数牌</view>
       <view class="chip-grid">
         <view wx:for="{{mingGangOptions}}" wx:key="key"
-              class="chip {{mingGang === item.key ? 'selected' : ''}}"
+              class="chip {{mingGang === item.key ? 'selected' : ''}} {{gangDisabled && mingGang === null ? 'disabled' : ''}}"
               bindtap="onMingGangChange" data-value="{{item.key}}">
           <text>{{item.label}}</text>
         </view>
@@ -106,7 +106,7 @@
       <view class="sub-title">暗杠数牌</view>
       <view class="chip-grid">
         <view wx:for="{{anGangOptions}}" wx:key="key"
-              class="chip {{anGang === item.key ? 'selected' : ''}}"
+              class="chip {{anGang === item.key ? 'selected' : ''}} {{gangDisabled && anGang === null ? 'disabled' : ''}}"
               bindtap="onAnGangChange" data-value="{{item.key}}">
           <text>{{item.label}}</text>
         </view>
@@ -117,7 +117,7 @@
       <view class="sub-title">红中</view>
       <view class="chip-grid">
         <view wx:for="{{hongZhongOptions}}" wx:key="key"
-              class="chip {{hongZhong === item.key ? 'selected' : ''}}"
+              class="chip {{hongZhong === item.key ? 'selected' : ''}} {{gangDisabled && hongZhong !== item.key ? 'disabled' : ''}}"
               bindtap="onHongZhongChange" data-value="{{item.key}}">
           <text>{{item.label}}</text>
         </view>
@@ -128,7 +128,7 @@
       <view class="sub-title">白板</view>
       <view class="chip-grid">
         <view wx:for="{{baiBanOptions}}" wx:key="key"
-              class="chip {{baiBan === item.key ? 'selected' : ''}}"
+              class="chip {{baiBan === item.key ? 'selected' : ''}} {{gangDisabled && baiBan !== item.key ? 'disabled' : ''}}"
               bindtap="onBaiBanChange" data-value="{{item.key}}">
           <text>{{item.label}}</text>
         </view>

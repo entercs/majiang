@@ -112,6 +112,8 @@ Page({
     baiBanOptions: BAIBAN_OPTIONS.filter(o => o.key !== 'none'),
     baiBan: null,
 
+    gangDisabled: false,
+
     qmOptions: QM_OPTIONS,
     qmType: null,
     qmDisabledMap: {},
@@ -198,31 +200,39 @@ Page({
 
   onMingGangChange(e) {
     const value = Number(e.currentTarget.dataset.value);
+    if (this.data.gangDisabled && this.data.mingGang === null) return;
     const newValue = (this.data.mingGang === value) ? null : value;
     this.setData({ mingGang: newValue });
+    this._applyGangDisabled();
     this._applyQmMutex();
     this._recompute();
   },
 
   onAnGangChange(e) {
     const value = Number(e.currentTarget.dataset.value);
+    if (this.data.gangDisabled && this.data.anGang === null) return;
     const newValue = (this.data.anGang === value) ? null : value;
     this.setData({ anGang: newValue });
+    this._applyGangDisabled();
     this._recompute();
   },
 
   onHongZhongChange(e) {
     const value = e.currentTarget.dataset.value;
+    if (this.data.gangDisabled && this.data.hongZhong === null) return;
     const newValue = (this.data.hongZhong === value) ? null : value;
     this.setData({ hongZhong: newValue });
+    this._applyGangDisabled();
     this._applyQmMutex();
     this._recompute();
   },
 
   onBaiBanChange(e) {
     const value = e.currentTarget.dataset.value;
+    if (this.data.gangDisabled && this.data.baiBan === null) return;
     const newValue = (this.data.baiBan === value) ? null : value;
     this.setData({ baiBan: newValue });
+    this._applyGangDisabled();
     this._applyQmMutex();
     this._recompute();
   },
@@ -243,6 +253,7 @@ Page({
       };
     }
     this.setData(updates);
+    this._applyGangDisabled();
     this._applyQmMutex();
     this._recompute();
   },
@@ -264,6 +275,7 @@ Page({
       anGang: null,
       hongZhong: null,
       baiBan: null,
+      gangDisabled: false,
       qmType: null,
       qmDisabledMap: {},
       qmHint: '',
@@ -299,6 +311,21 @@ Page({
         handleError({ code: res.code, message: res.message }, this);
       }
     }).catch(err => { wx.hideLoading(); handleError(err, this); });
+  },
+
+  // 计算当前总杠数组数（上限3组）
+  _getTotalGangGroups() {
+    const mg = this.data.mingGang || 0;
+    const ag = this.data.anGang || 0;
+    const hz = (this.data.hongZhong && this.data.hongZhong !== 'none') ? 1 : 0;
+    const bb = (this.data.baiBan && this.data.baiBan !== 'none') ? 1 : 0;
+    return mg + ag + hz + bb;
+  },
+
+  // 杠数组数达到上限时禁用所有杠选项
+  _applyGangDisabled() {
+    const total = this._getTotalGangGroups();
+    this.setData({ gangDisabled: total >= 3 });
   },
 
   // 门清与听牌型互斥（按 key 单独禁用）：
