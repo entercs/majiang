@@ -4,16 +4,20 @@
     <view class="topbar-item">
       <text class="topbar-label">玩法</text>
       <picker mode="selector" range="{{ruleTypes}}" value="{{ruleTypeIndex}}"
-              bindchange="onRuleTypeChange" range-key="label">
+              bindchange="onRuleTypeChange">
         <view class="picker-value">
-          <text>{{ruleTypes[ruleTypeIndex].label}}</text>
+          <text>{{ruleTypes[ruleTypeIndex]}}</text>
           <text class="arrow">▾</text>
         </view>
       </picker>
     </view>
     <view class="topbar-item">
       <text class="topbar-label">底分</text>
-      <text class="topbar-value">{{baseScore}}</text>
+      <view class="base-score-stepper">
+        <view class="stepper-btn {{baseScoreEditable <= baseScoreMin ? 'disabled' : ''}}" bindtap="onBaseScoreChange" data-value="{{baseScoreEditable - 1}}">−</view>
+        <text class="stepper-num">{{baseScoreEditable}}</text>
+        <view class="stepper-btn {{baseScoreEditable >= baseScoreMax ? 'disabled' : ''}}" bindtap="onBaseScoreChange" data-value="{{baseScoreEditable + 1}}">+</view>
+      </view>
     </view>
   </view>
 
@@ -35,9 +39,12 @@
   <view class="total-card {{canHu ? 'can-hu' : 'cannot-hu'}}">
     <view class="total-row">
       <text class="total-num">{{ruleType === 'sichuan' ? cappedFan : totalFan}}</text>
-      <text class="total-unit">番{{ruleType === 'sichuan' && totalFan > cappedFan ? '（封顶）' : ''}}</text>
+      <text class="total-unit">{{ruleType === 'sichuan' ? '番' : '炮'}}{{ruleType === 'sichuan' && totalFan > cappedFan ? '（封顶）' : ''}}</text>
     </view>
-    <view class="can-hu-text">{{canHuText}}</view>
+    <view wx:if="{{ruleType !== 'sichuan'}}" class="can-hu-text">{{totalFan < 2 ? '❌ 不可胡牌（炮数不足2炮）' : '✅ 可胡牌'}}</view>
+    <view wx:if="{{ruleType === 'sichuan' && canHu}}" class="final-multiplier">
+      倍数：{{multiplier}}倍{{cappedFan < totalFan ? '（4番封顶）' : ''}}
+    </view>
   </view>
 
   <!-- ==================== 黄梅麻将 ==================== -->
@@ -159,62 +166,77 @@
       <view class="section-title">特殊加番</view>
       <view class="chip-grid">
         <view wx:for="{{scSpecialWinTypes}}" wx:key="key"
-              class="chip {{specialWinTypeSelected[item.key] ? 'selected' : ''}}"
+              class="chip {{specialWinTypeSelected[item.key] ? 'selected' : ''}} {{specialWinTypeDisabled ? 'disabled' : ''}}"
               bindtap="onSpecialWinTypeChange" data-value="{{item.key}}">
           <text>{{item.label}}</text>
         </view>
       </view>
+      <view class="special-hint">以上加番项可叠加，每项+1番{{specialWinTypeDisabled ? '（天胡/地胡无需特殊加番）' : ''}}</view>
     </view>
 
     <!-- 根的数量 -->
     <view class="section">
       <view class="section-title">根的数量</view>
       <view class="gen-control">
-        <view class="gen-label">每组四张相同牌 +1 番</view>
+        <view class="gen-label">每有一组四张相同的牌 +1 番（最多3根）</view>
         <view class="stepper">
-          <view class="stepper-btn {{genCountLocked ? 'disabled' : ''}}" bindtap="onGenCountChange" data-value="{{genCount - 1}}">−</view>
+          <view class="stepper-btn {{genCountLocked || genCount <= 0 ? 'disabled' : ''}}" bindtap="onGenCountChange" data-value="{{genCount - 1}}">−</view>
           <text class="stepper-num">{{genCount}}</text>
-          <view class="stepper-btn {{genCountLocked ? 'disabled' : ''}}" bindtap="onGenCountChange" data-value="{{genCount + 1}}">+</view>
+          <view class="stepper-btn {{genCountLocked || genCount >= genCountMax ? 'disabled' : ''}}" bindtap="onGenCountChange" data-value="{{genCount + 1}}">+</view>
         </view>
-        <view wx:if="{{genCountLocked}}" class="gen-locked-hint">（龙七对自带1根）</view>
+        <view wx:if="{{genCountLocked}}" class="gen-locked-hint">（龙七对自带1根，锁定）</view>
       </view>
     </view>
 
-    <!-- 提示信息 -->
-    <view class="section">
-      <view class="sichuan-hint">杠牌（刮风下雨）由系统自动即时结算，不计入番数</view>
-    </view>
-  </block>
-
-  <!-- 番数明细 -->
-  <view class="section breakdown">
-    <view class="section-title">番数明细</view>
-    <view wx:if="{{fanBreakdown.length === 0}}" class="empty-hint">（尚无生效番型）</view>
-    <view class="breakdown-row" wx:for="{{fanBreakdown}}" wx:key="name">
-      <text class="bd-name">{{item.name}}</text>
-      <text class="bd-fan">+{{item.fan}} 番</text>
-    </view>
-    <view class="breakdown-total">
-      <text>合计</text>
-      <text class="bd-fan-total">{{totalFan}} 番</text>
-      <text wx:if="{{ruleType === 'sichuan' && cappedFan < totalFan}}" class="bd-cap">（封顶{{cappedFan}}番）</text>
-    </view>
-  </view>
-
-  <!-- 预览 + 操作 -->
-  <view class="preview-card" wx:if="{{canApply}}">
-    <view class="preview-text">你付给 <text class="preview-name">{{targetName}}</text></view>
-    <view class="preview-amount">{{amount}} <text class="preview-unit">分</text></view>
-    <view class="preview-meta" wx:if="{{ruleType === 'sichuan'}}">
-      （{{cappedFan < totalFan ? '封顶' : ''}}{{cappedFan}}番 × 2^{{cappedFan}} = {{multiplier || 1}}倍底分）
-    </view>
-    <view class="preview-meta" wx:else>
-      （{{totalFan}} 番 × {{baseScore}} 底分）
-    </view>
-  </view>
+    </block>
 
   <view class="footer">
     <view class="btn default" bindtap="onReset">重置</view>
     <view class="btn primary {{canApply ? '' : 'disabled'}}" bindtap="onApply">应用</view>
+  </view>
+
+  <!-- 确认弹窗 -->
+  <view class="confirm-overlay" wx:if="{{showConfirmDialog}}">
+    <view class="confirm-dialog">
+      <view class="confirm-title">确认付分</view>
+
+      <!-- 明细 -->
+      <view class="confirm-breakdown">
+        <view class="breakdown-header">
+          <text class="bd-col-name">番型</text>
+          <text class="bd-col-fan">{{ruleType === 'sichuan' ? '番' : '炮'}}</text>
+          <text class="bd-col-score">分数</text>
+        </view>
+        <view class="breakdown-row" wx:for="{{fanBreakdown}}" wx:key="name">
+          <text class="bd-name">{{item.name}}</text>
+          <text class="bd-fan">+{{item.fan}}</text>
+          <text class="bd-score">+{{item.score || 0}}</text>
+        </view>
+        <view class="breakdown-total">
+          <text>合计</text>
+          <text class="bd-fan-total">{{totalFan}} {{ruleType === 'sichuan' ? '番' : '炮'}}</text>
+          <text class="bd-score-total">{{amount}} 分</text>
+        </view>
+        <view wx:if="{{ruleType === 'sichuan' && cappedDeduction > 0}}" class="capped-deduction">封顶扣减：-{{cappedDeduction}} 番</view>
+        <view wx:if="{{ruleType === 'sichuan' && cappedFan < totalFan}}" class="capped-note">（已按4番封顶计算）</view>
+      </view>
+
+      <!-- 付分预览 -->
+      <view class="confirm-preview">
+        <view class="preview-text">你付给 <text class="preview-name">{{targetName}}</text></view>
+        <view class="preview-amount">{{amount}} <text class="preview-unit">分</text></view>
+        <view class="preview-meta" wx:if="{{ruleType === 'sichuan'}}">
+          （{{baseScoreEditable}} 底分 × 2^{{cappedFan}} = {{multiplier}} 倍）
+        </view>
+        <view class="preview-meta" wx:else>
+          （{{totalFan}} {{ruleType === 'sichuan' ? '番' : '炮'}} × {{baseScoreEditable}} 底分）
+        </view>
+      </view>
+
+      <view class="confirm-btns">
+        <view class="btn default" bindtap="onCancel">取消</view>
+        <view class="btn primary" bindtap="onConfirm">确认</view>
+      </view>
+    </view>
   </view>
 </view>

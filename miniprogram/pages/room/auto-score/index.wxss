@@ -2,12 +2,18 @@
 
 /* 顶栏 */
 .topbar { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
-.topbar-item { flex: 1; background: #fff; border-radius: 12rpx; padding: 16rpx 20rpx; display: flex; flex-direction: column; gap: 8rpx; }
+.topbar-item { flex: 1; background: #fff; border-radius: 12rpx; padding: 16rpx 20rpx; display: flex; flex-direction: column; gap: 8rpx; overflow: hidden; box-sizing: border-box; }
 .topbar-label { font-size: 24rpx; color: #7A7E83; }
 .picker-value { display: flex; align-items: center; justify-content: space-between; font-size: 30rpx; font-weight: 600; color: #333; }
 .picker-value .arrow { color: #7A7E83; font-size: 24rpx; }
 .topbar-input { font-size: 30rpx; font-weight: 600; color: #333; }
 .topbar-value { font-size: 30rpx; font-weight: 600; color: #1aad19; }
+.base-score-stepper { display: flex; align-items: center; background: #f5f5f5; border-radius: 8rpx; overflow: hidden; }
+.base-score-stepper .stepper-btn:first-child { border-top-left-radius: 8rpx; border-bottom-left-radius: 8rpx; }
+.base-score-stepper .stepper-btn:last-child { border-top-right-radius: 8rpx; border-bottom-right-radius: 8rpx; }
+.base-score-stepper .stepper-btn { flex-shrink: 0; width: 56rpx; height: 56rpx; line-height: 56rpx; text-align: center; font-size: 32rpx; color: #1aad19; font-weight: 600; }
+.base-score-stepper .stepper-btn:active:not(.disabled) { background: #e0e0e0; }
+.base-score-stepper .stepper-num { flex: 1; text-align: center; font-size: 32rpx; font-weight: 700; color: #333; padding: 0 4rpx; min-width: 48rpx; }
 
 /* 总番数大卡 */
 .total-card { border-radius: 16rpx; padding: 40rpx 24rpx; margin-bottom: 24rpx; text-align: center; color: #fff; transition: background 0.2s; }
@@ -17,6 +23,7 @@
 .total-num { font-size: 96rpx; font-weight: 800; line-height: 1; }
 .total-unit { font-size: 36rpx; font-weight: 600; }
 .can-hu-text { font-size: 26rpx; margin-top: 8rpx; opacity: 0.95; }
+.final-multiplier { font-size: 28rpx; margin-top: 12rpx; opacity: 0.9; font-weight: 600; }
 
 /* section 通用 */
 .section { background: #fff; border-radius: 12rpx; padding: 24rpx; margin-bottom: 16rpx; }
@@ -54,14 +61,20 @@
 .chip.disabled.selected { opacity: 0.4; background: #f8f8f8; color: #999; border-color: #e0e0e0; box-shadow: none; }  /* 禁用时不显示高亮 */
 .chip:active:not(.disabled) { transform: scale(0.97); }  /* 点击微缩反馈 */
 
-/* 番数明细 */
+/* 番数明细（3列：番型/番/分数） */
 .breakdown .empty-hint { color: #7A7E83; font-size: 26rpx; padding: 16rpx 0; }
+.breakdown-header { display: flex; justify-content: space-between; align-items: center; padding: 8rpx 0; border-bottom: 1rpx solid #e0e0e0; margin-bottom: 4rpx; }
+.bd-col-name { font-size: 24rpx; color: #7A7E83; flex: 1; }
+.bd-col-fan { font-size: 24rpx; color: #7A7E83; width: 80rpx; text-align: center; }
+.bd-col-score { font-size: 24rpx; color: #7A7E83; width: 80rpx; text-align: right; }
 .breakdown-row { display: flex; justify-content: space-between; align-items: center; padding: 12rpx 0; border-bottom: 1rpx dashed #f0f0f0; }
 .breakdown-row:last-of-type { border-bottom: none; }
-.bd-name { font-size: 28rpx; color: #333; }
-.bd-fan { font-size: 28rpx; color: #1aad19; font-weight: 600; }
+.bd-name { font-size: 28rpx; color: #333; flex: 1; }
+.bd-fan { font-size: 28rpx; color: #1aad19; font-weight: 600; width: 80rpx; text-align: center; }
+.bd-score { font-size: 28rpx; color: #333; font-weight: 600; width: 80rpx; text-align: right; }
 .breakdown-total { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0 4rpx; margin-top: 8rpx; border-top: 2rpx solid #1aad19; font-size: 30rpx; font-weight: 600; color: #1aad19; }
 .bd-fan-total { font-size: 36rpx; font-weight: 800; }
+.bd-score-total { font-size: 32rpx; font-weight: 700; }
 .bd-cap { color: #7A7E83; font-size: 24rpx; font-weight: 400; margin-left: 8rpx; }
 
 /* 玩家网格 */
@@ -87,6 +100,23 @@
 .btn.disabled { opacity: 0.5; }
 .btn:active { opacity: 0.8; }
 
+/* 确认弹窗 */
+.confirm-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.confirm-dialog { background: #fff; border-radius: 20rpx; padding: 40rpx 32rpx; width: 88%; max-width: 640rpx; box-sizing: border-box; }
+.confirm-title { font-size: 36rpx; font-weight: 700; color: #333; text-align: center; margin-bottom: 32rpx; }
+.confirm-breakdown { background: #f9f9f9; border-radius: 12rpx; padding: 20rpx; margin-bottom: 24rpx; }
+.confirm-breakdown .breakdown-header { padding-bottom: 8rpx; border-bottom: 1rpx solid #e0e0e0; margin-bottom: 4rpx; }
+.confirm-breakdown .breakdown-row { padding: 8rpx 0; }
+.confirm-breakdown .breakdown-total { border-top: 2rpx solid #1aad19; margin-top: 8rpx; padding-top: 8rpx; }
+.confirm-preview { background: linear-gradient(135deg, #1aad19, #4cd964); border-radius: 16rpx; padding: 32rpx 24rpx; text-align: center; color: #fff; margin-bottom: 32rpx; }
+.confirm-preview .preview-text { font-size: 28rpx; opacity: 0.95; margin-bottom: 12rpx; }
+.confirm-preview .preview-name { font-weight: 700; }
+.confirm-preview .preview-amount { font-size: 72rpx; font-weight: 800; line-height: 1.2; letter-spacing: 2rpx; }
+.confirm-preview .preview-unit { font-size: 28rpx; font-weight: 600; opacity: 0.9; }
+.confirm-preview .preview-meta { font-size: 22rpx; opacity: 0.8; margin-top: 8rpx; }
+.confirm-btns { display: flex; gap: 16rpx; }
+.confirm-btns .btn { flex: 1; height: 88rpx; line-height: 88rpx; text-align: center; border-radius: 12rpx; font-size: 32rpx; font-weight: 600; }
+
 /* 四川麻将 - 根数量控制 */
 .gen-control { display: flex; align-items: center; gap: 16rpx; flex-wrap: wrap; }
 .gen-label { font-size: 26rpx; color: #7A7E83; flex: 1; }
@@ -99,3 +129,6 @@
 
 /* 四川麻将提示 */
 .sichuan-hint { font-size: 24rpx; color: #7A7E83; padding: 8rpx 0 0; }
+.special-hint { font-size: 22rpx; color: #7A7E83; padding: 8rpx 0 0; }
+.capped-deduction { font-size: 26rpx; color: #e74c3c; padding: 8rpx 0 0; text-align: right; }
+.capped-note { font-size: 24rpx; color: #e74c3c; padding: 4rpx 0 0; }

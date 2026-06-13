@@ -6,10 +6,8 @@ const { generateTempId } = require('../../../utils/cloud-id');
 // ============== 玩法常量 ==============
 
 // 玩法类型列表（支持切换）
-const RULE_TYPES = [
-  { key: 'huangmei', label: '黄梅麻将' },
-  { key: 'sichuan',  label: '四川麻将' },
-];
+const RULE_TYPES = ['黄梅麻将', '四川麻将'];
+const RULE_TYPE_KEYS = ['huangmei', 'sichuan'];
 
 // ============== 黄梅麻将常量 ==============
 
@@ -62,15 +60,17 @@ const HONOR_CONFLICTS_WITH_MENQING = ['peng', 'minggang'];
 // ============== 四川麻将常量 ==============
 
 const SC_CARD_TYPES = [
-  { key: 'pinghu',     label: '平胡',    fan: 1 },
-  { key: 'duiduihu',   label: '对对胡',  fan: 2 },
-  { key: 'qiyidui',    label: '七对',    fan: 3 },
-  { key: 'qingyise',   label: '清一色',  fan: 3 },
-  { key: 'longqidui',  label: '龙七对',  fan: 4 },
-  { key: 'qingqidui',  label: '清七对',  fan: 4 },
-  { key: 'qingdui',    label: '清对',    fan: 4 },
-  { key: 'jiangdui',   label: '将对',    fan: 4 },
-  { key: 'quanqiuren', label: '全求人',  fan: 2 },
+  { key: 'pinghu',        label: '平胡',      fan: 1 },
+  { key: 'duiduihu',      label: '对对胡',    fan: 2 },
+  { key: 'qiyidui',       label: '七对',      fan: 3 },
+  { key: 'qingyise',      label: '清一色',    fan: 3 },
+  { key: 'longqidui',     label: '龙七对',    fan: 4 },
+  { key: 'qingqidui',     label: '清七对',    fan: 4 },
+  { key: 'qingdui',       label: '清对',      fan: 4 },
+  { key: 'jiangdui',      label: '将对',      fan: 4 },
+  { key: 'qinglongqidui', label: '清龙七对', fan: 5 },
+  { key: 'tianhu',        label: '天胡',      fan: 8 },
+  { key: 'dihu',          label: '地胡',      fan: 8 },
 ];
 const SC_CARD_RIVAL = {
   qiyidui: 'duiduihu', duiduihu: 'qiyidui',
@@ -100,6 +100,9 @@ Page({
 
     // ---------- 共用 ----------
     baseScore: 1,
+    baseScoreEditable: 1,
+    baseScoreMin: 1,
+    baseScoreMax: 99,
     totalFan: 0,
     cappedFan: 0,
     canHu: false,
@@ -112,6 +115,7 @@ Page({
     fanBreakdown: [],
     amount: 0,
     canApply: false,
+    showConfirmDialog: false,
 
     // ---------- 黄梅麻将 ----------
     hmCardTypes: HM_CARD_TYPES,
@@ -165,7 +169,7 @@ Page({
       .filter(p => p._id !== roomStore.currentPlayerId)
       .sort((a, b) => a.seatIndex - b.seatIndex);
     const baseScore = roomStore.rule?.baseScore ?? 1;
-    this.setData({ otherPlayers, baseScore });
+    this.setData({ otherPlayers, baseScore, baseScoreEditable: baseScore, ruleTypes: RULE_TYPES, ruleTypeIndex: 0, genCountMax: 3, specialWinTypeDisabled: false });
     this._recompute();
   },
 
@@ -173,7 +177,7 @@ Page({
 
   onRuleTypeChange(e) {
     const idx = Number(e.detail.value);
-    const ruleType = RULE_TYPES[idx].key;
+    const ruleType = RULE_TYPE_KEYS[idx];
     this.setData({ ruleTypeIndex: idx, ruleType });
     // 重置到各玩法的默认值
     if (ruleType === 'huangmei') {
@@ -193,6 +197,7 @@ Page({
         specialWinTypes: [],
         genCount: 0,
         genCountLocked: false,
+        specialWinTypeDisabled: false,
         targetId: '', targetName: '',
       });
     }
@@ -300,6 +305,9 @@ Page({
     const value = e.currentTarget.dataset.value;
     let genCount = this.data.genCount;
     let genCountLocked = false;
+    let specialWinTypes = this.data.specialWinTypes || [];
+    const isTianhuOrDihu = (value === 'tianhu' || value === 'dihu');
+
     // 龙七对默认带1根，锁定
     if (value === 'longqidui') {
       genCount = 1;
@@ -308,7 +316,21 @@ Page({
       genCount = 0;
       genCountLocked = false;
     }
-    this.setData({ scCardType: value, genCount, genCountLocked });
+
+    // 天胡/地胡 → 清空并禁用所有特殊加番，根归零
+    if (isTianhuOrDihu) {
+      specialWinTypes = [];
+      genCount = 0;
+      genCountLocked = false;
+    }
+
+    this.setData({
+      scCardType: value,
+      genCount,
+      genCountLocked,
+      specialWinTypes,
+      specialWinTypeDisabled: isTianhuOrDihu,
+    });
     this._recompute();
   },
 
@@ -316,12 +338,39 @@ Page({
 
   onSpecialWinTypeChange(e) {
     const value = e.currentTarget.dataset.value;
+    if (this.data.specialWinTypeDisabled) return;
     const cur = this.data.specialWinTypes || [];
     let next;
+
     if (cur.includes(value)) {
+      // 取消选中
       next = cur.filter(k => k !== value);
     } else {
+      // 选中并应用互斥
       next = [...cur, value];
+      // 自摸与杠上类/海底类互斥
+      if (['gangshanghua', 'qiangganghu', 'haidilaoyue'].includes(value)) {
+        // 这些自动算自摸 → 去掉自摸
+        next = next.filter(k => k !== 'zimo');
+      }
+      if (['gangshangpao', 'haidipao'].includes(value)) {
+        // 点炮类 → 去掉自摸
+        next = next.filter(k => k !== 'zimo');
+      }
+      // 杠上花 ↔ 杠上炮互斥
+      if (value === 'gangshanghua') {
+        next = next.filter(k => k !== 'gangshangpao');
+      }
+      if (value === 'gangshangpao') {
+        next = next.filter(k => k !== 'gangshanghua');
+      }
+      // 海底捞月 ↔ 海底炮互斥
+      if (value === 'haidilaoyue') {
+        next = next.filter(k => k !== 'haidipao');
+      }
+      if (value === 'haidipao') {
+        next = next.filter(k => k !== 'haidilaoyue');
+      }
     }
     this.setData({ specialWinTypes: next });
     this._recompute();
@@ -332,11 +381,19 @@ Page({
   onGenCountChange(e) {
     if (this.data.genCountLocked) return;
     const value = Number(e.currentTarget.dataset.value);
+    if (value < 0 || value > 3) return;
     this.setData({ genCount: value });
     this._recompute();
   },
 
   // ============== 共用 ==============
+
+  onBaseScoreChange(e) {
+    const value = Number(e.currentTarget.dataset.value);
+    if (value < this.data.baseScoreMin || value > this.data.baseScoreMax) return;
+    this.setData({ baseScoreEditable: value });
+    this._recompute();
+  },
 
   onTargetChange(e) {
     const id = e.currentTarget.dataset.id;
@@ -356,7 +413,9 @@ Page({
         hongZhong: null, baiBan: null,
         gangDisabled: false,
         qmType: null, qmDisabledMap: {}, qmHint: '',
+        baseScoreEditable: this.data.baseScore,
         targetId: '', targetName: '',
+        showConfirmDialog: false,
       });
     } else {
       this.setData({
@@ -364,7 +423,10 @@ Page({
         specialWinTypes: [],
         genCount: 0,
         genCountLocked: false,
+        specialWinTypeDisabled: false,
+        baseScoreEditable: this.data.baseScore,
         targetId: '', targetName: '',
+        showConfirmDialog: false,
       });
     }
     this._recompute();
@@ -372,10 +434,15 @@ Page({
 
   onApply() {
     if (!this.data.canApply) {
-      const msg = this.data.canHu ? '请选付给谁' : '总番数不足，不能胡';
+      const msg = this.data.canHu ? '请选付给谁' : (this.data.ruleType === 'huangmei' ? '炮数不足，不能胡' : '番数不足，不能胡');
       wx.showToast({ title: msg, icon: 'none' });
       return;
     }
+    this.setData({ showConfirmDialog: true });
+  },
+
+  onConfirm() {
+    this.setData({ showConfirmDialog: false });
     const amount = this.data.amount;
     const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
     const targetId = this.data.targetId;
@@ -397,6 +464,10 @@ Page({
         handleError({ code: res.code, message: res.message }, this);
       }
     }).catch(err => { wx.hideLoading(); handleError(err, this); });
+  },
+
+  onCancel() {
+    this.setData({ showConfirmDialog: false });
   },
 
   // ============== 黄梅麻将内部方法 ==============
@@ -463,32 +534,31 @@ Page({
     // 1) 基础番型（单选）
     const ct = _find(SC_CARD_TYPES, this.data.scCardType);
     if (ct && ct.fan > 0) {
-      breakdown.push({ name: ct.label, fan: ct.fan });
+      breakdown.push({ name: ct.label, fan: ct.fan, score: this.data.baseScoreEditable * Math.pow(2, ct.fan) });
     }
 
     // 2) 特殊加番项（每项+1番，可叠加）
     for (const key of (this.data.specialWinTypes || [])) {
       const sw = _find(SC_SPECIAL_WIN_TYPES, key);
-      if (sw && sw.fan > 0) breakdown.push({ name: sw.label, fan: sw.fan });
+      if (sw && sw.fan > 0) breakdown.push({ name: sw.label, fan: sw.fan, score: this.data.baseScoreEditable * Math.pow(2, sw.fan) });
     }
 
     // 3) 根（每组四张+1番，可叠加）
     if (this.data.genCount > 0) {
-      breakdown.push({ name: `根×${this.data.genCount}`, fan: this.data.genCount });
+      breakdown.push({ name: `根×${this.data.genCount}`, fan: this.data.genCount, score: this.data.baseScoreEditable * Math.pow(2, this.data.genCount) });
     }
 
     let totalFan = breakdown.reduce((s, x) => s + x.fan, 0);
     const cappedFan = Math.min(totalFan, SC_MAX_FAN);
     const canHu = totalFan >= 1;
 
-    // 倍数 = 2^封顶番数，封顶16
+    // 分数 = 底分 × 2^总番数（封顶后）
     const multiplier = Math.pow(2, cappedFan);
-    const amount = multiplier * (this.data.baseScore || 0);
+    const amount = Math.round(this.data.baseScoreEditable * multiplier);
     const canApply = canHu && !!this.data.targetId;
 
-    const canHuText = canHu
-      ? `✅ 可胡（${cappedFan < totalFan ? `封顶${cappedFan}番` : `${totalFan}番`}）`
-      : '❌ 不可胡（1番起胡）';
+    // 封顶扣减行
+    const cappedDeduction = cappedFan < totalFan ? totalFan - cappedFan : 0;
 
     // 构建 WXML 所需的选中映射（单选 + 多选）
     const scCardTypeSelected = {};
@@ -501,8 +571,8 @@ Page({
       fanBreakdown: breakdown,
       totalFan,
       cappedFan,
+      cappedDeduction,
       canHu,
-      canHuText,
       amount,
       multiplier,
       canApply,
@@ -518,45 +588,45 @@ Page({
 
     for (const key of (this.data.hmCardTypeKeys || [])) {
       const c = _find(HM_CARD_TYPES, key);
-      if (c && c.fan > 0) breakdown.push({ name: c.label, fan: c.fan });
+      if (c && c.fan > 0) breakdown.push({ name: c.label, fan: c.fan, score: c.fan * this.data.baseScoreEditable });
     }
 
     if (this.data.winType) {
       const win = _find(HM_WIN_TYPES, this.data.winType);
-      if (win && win.fan > 0) breakdown.push({ name: win.label, fan: win.fan });
+      if (win && win.fan > 0) breakdown.push({ name: win.label, fan: win.fan, score: win.fan * this.data.baseScoreEditable });
     }
 
     if (this.data.facai != null) {
       const facaiFan = this.data.facai === 4 ? 8 : this.data.facai;
-      breakdown.push({ name: `发财×${this.data.facai}`, fan: facaiFan });
+      breakdown.push({ name: `发财×${this.data.facai}`, fan: facaiFan, score: facaiFan * this.data.baseScoreEditable });
     }
 
     if (this.data.mingGang != null) {
-      breakdown.push({ name: `明杠数牌×${this.data.mingGang}`, fan: this.data.mingGang });
+      breakdown.push({ name: `明杠数牌×${this.data.mingGang}`, fan: this.data.mingGang, score: this.data.mingGang * this.data.baseScoreEditable });
     }
     if (this.data.anGang != null) {
-      breakdown.push({ name: `暗杠数牌×${this.data.anGang}`, fan: this.data.anGang * 2 });
+      breakdown.push({ name: `暗杠数牌×${this.data.anGang}`, fan: this.data.anGang * 2, score: this.data.anGang * 2 * this.data.baseScoreEditable });
     }
 
     if (this.data.hongZhong) {
       const hz = _find(HONGZHONG_OPTIONS, this.data.hongZhong);
-      if (hz && hz.fan > 0) breakdown.push({ name: `红中·${hz.label}`, fan: hz.fan });
+      if (hz && hz.fan > 0) breakdown.push({ name: `红中·${hz.label}`, fan: hz.fan, score: hz.fan * this.data.baseScoreEditable });
     }
     if (this.data.baiBan) {
       const bb = _find(BAIBAN_OPTIONS, this.data.baiBan);
-      if (bb && bb.fan > 0) breakdown.push({ name: `白板·${bb.label}`, fan: bb.fan });
+      if (bb && bb.fan > 0) breakdown.push({ name: `白板·${bb.label}`, fan: bb.fan, score: bb.fan * this.data.baseScoreEditable });
     }
 
     if (this.data.qmType && !this.data.qmDisabledMap[this.data.qmType]) {
       const qm = _find(QM_OPTIONS, this.data.qmType);
-      if (qm && qm.fan > 0) breakdown.push({ name: qm.label, fan: qm.fan });
+      if (qm && qm.fan > 0) breakdown.push({ name: qm.label, fan: qm.fan, score: qm.fan * this.data.baseScoreEditable });
     }
 
     const totalFan = breakdown.reduce((s, x) => s + x.fan, 0);
     const canHu = totalFan >= 2;
-    const canHuText = canHu ? '✅ 可胡牌' : '❌ 不可胡牌（总番数不足2番）';
+    const canHuText = canHu ? '✅ 可胡牌' : '❌ 不可胡牌（炮数不足2炮）';
 
-    const amount = totalFan * (this.data.baseScore || 0);
+    const amount = totalFan * (this.data.baseScoreEditable || 0);
     const canApply = canHu && !!this.data.targetId;
 
     this.setData({
