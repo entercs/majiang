@@ -17,6 +17,11 @@ function getRoom(roomId) {
   return db.collection('rooms').doc(roomId).get().then(r => r.data);
 }
 
+function getRoomStatus(roomId) {
+  const db = wx.cloud.database();
+  return db.collection('rooms').doc(roomId).field({ status: true }).get().then(r => r.data?.status);
+}
+
 function getPlayers(roomId) {
   const db = wx.cloud.database();
   return db.collection('players').where({ roomId }).get().then(r => r.data);
@@ -34,4 +39,4 @@ function getMyRooms({ clientId }) {
   return callFunction('getMyRooms', { clientId });
 }
 
-module.exports = { createRoom, joinRoom, updateRule, getRoom, getPlayers, finishRoom, leaveRoom, getMyRooms };
+module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, finishRoom, leaveRoom, getMyRooms };

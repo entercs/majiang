@@ -42,6 +42,8 @@ Page({
 
   onUnload() {
     if (this._renderTimer) { clearInterval(this._renderTimer); this._renderTimer = null; }
+    const syncWatcher = require('../../../stores/syncWatcher');
+    syncWatcher.stop();
   },
 
   _init(roomId) {
@@ -89,6 +91,14 @@ Page({
       onPlayersChange: (players) => { roomStore.setPlayers(players); this._render(); },
       onRoundsChange: (rounds) => { roomStore.setRounds(rounds); this._render(); },
       onRuleChange: () => { this._render(); },
+      onRoomClosed: () => {
+        wx.showModal({
+          title: '房间已结束',
+          content: '本局已结束，点击确定查看总结算。',
+          showCancel: false,
+          success: () => wx.redirectTo({ url: '/pages/room/summary/index' }),
+        });
+      },
     });
   },
 

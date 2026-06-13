@@ -51,18 +51,5 @@ exports.main = async (event) => {
     .get();
   const onlineCount = onlineRes.data.length;
 
-  // 5) 若无人在线且房间还 active → 自动关
-  let autoClosed = false;
-  if (onlineCount === 0 && roomRes.data.status === ROOM_STATUS.ACTIVE) {
-    await db.collection('rooms').doc(roomId).update({
-      data: {
-        status: ROOM_STATUS.FINISHED,
-        closedAt: Date.now(),
-        closedBy: 'auto',
-      },
-    });
-    autoClosed = true;
-  }
-
-  return { code: 'OK', data: { autoClosed, onlineCount } };
+  return { code: 'OK', data: { onlineCount } };
 };
