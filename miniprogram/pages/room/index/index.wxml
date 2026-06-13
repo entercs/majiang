@@ -9,8 +9,8 @@
   <!-- 4 家横排（按 seatIndex 排序，人数不限） -->
   <view class="players-row">
     <block wx:for="{{playersRow}}" wx:key="_id">
-      <view class="player-card {{item._id === currentPlayerId ? 'self' : ''}}" bind:tap="onTapPlayer" data-id="{{item._id}}" data-self="{{item._id === currentPlayerId}}">
-        <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+      <view class="player-card {{item._id === currentPlayerId ? 'self' : ''}} {{!item.isOnline ? 'offline' : ''}}" bind:tap="onTapPlayer" data-id="{{item._id}}" data-self="{{item._id === currentPlayerId}}">
+        <image class="avatar {{!item.isOnline ? 'offline' : ''}}" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
         <text class="nick">{{item.nickname}}</text>
         <text class="score">{{item.totalScore}}</text>
       </view>
@@ -72,7 +72,7 @@
     bind:cancel="onPopupCancel"
   ></score-popup>
 
-  <!-- self 操作弹窗（修改昵称 / 退出房间 / 结束本局） -->
+  <!-- self 操作弹窗（头像选择 / 修改昵称 / 退出房间 / 结束本局） -->
   <player-popup
     wx:if="{{selfPopupVisible}}"
     player-id="{{selfPopupTarget._id}}"
@@ -80,7 +80,9 @@
     avatar-index="{{selfPopupTarget.avatarIndex}}"
     total-score="{{selfPopupTarget.totalScore}}"
     bind:close="onSelfPopupClose"
-    bind:editnickname="onSelfPopupEditNickname"
+    bind:avatarchange="onSelfAvatarChange"
+    bind:confirm="onSelfPopupConfirm"
+    bind:editnick="onSelfEditNick"
     bind:leaveroom="onSelfPopupLeaveRoom"
     bind:finishroom="onSelfPopupFinishRoom"
   ></player-popup>

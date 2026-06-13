@@ -68,7 +68,10 @@ const ROOM_STATUS = Object.freeze({
 })
 
 // 头像数量
-const AVATAR_COUNT = 8
+const AVATAR_COUNT = 7
+
+// 头像名字列表（对应 avatar-0.png ~ avatar-6.png）
+const AVATAR_NAMES = ['东风', '南风', '西风', '北风', '红中', '白板', '发财']
 
 // 房间号长度
 const ROOM_CODE_LENGTH = 6
@@ -82,5 +85,6 @@ module.exports = {
   ERR_CODE,
   ROOM_STATUS,
   AVATAR_COUNT,
+  AVATAR_NAMES,
   ROOM_CODE_LENGTH,
 }

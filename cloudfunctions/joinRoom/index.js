@@ -35,7 +35,8 @@ async function _deleteOldestPlayers(clientId, count) {
  */
 exports.main = async (event) => {
   const { openid } = cloud.getWXContext();
-  const { roomCode, nickname, avatarIndex, clientId } = event;
+  const { roomCode, nickname, avatarIndex, clientId, nicknameAuto } = event;
+  console.log('【joinRoom】入参:', { roomCode, nickname, avatarIndex, nicknameAuto, clientId });
 
   if (typeof roomCode !== 'string' || !/^\d{6}$/.test(roomCode)) {
     return { code: 'INVALID_INPUT', message: '房间号格式错误', detail: 'roomCode' };
@@ -43,8 +44,8 @@ exports.main = async (event) => {
   if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
     return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
   }
-  if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 7) {
-    return { code: 'INVALID_INPUT', message: '头像序号 0-7', detail: 'avatarIndex' };
+  if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 6) {
+    return { code: 'INVALID_INPUT', message: '头像序号 0-6', detail: 'avatarIndex' };
   }
 
   // 0. 反滥用：累计加入房间数（仅对"新加入"生效——重入不计）
@@ -79,24 +80,31 @@ exports.main = async (event) => {
       .get();
     if (existing.data.length > 0) {
       const p = existing.data[0];
-      // 激活 + 同步昵称头像
-      await db.collection('players').doc(p._id).update({
-        data: {
-          isOnline: true,
-          lastSeenAt: now,
-          nickname: nickname.trim(),
-          avatarIndex,
-        },
-      });
+      const updateData = {
+        isOnline: true,
+        lastSeenAt: now,
+      };
+      // 如果用户手动设置过昵称（nicknameAuto=false），同步过来；否则保持原昵称
+      if (nicknameAuto === false) {
+        updateData.nickname = nickname.trim();
+        updateData.avatarIndex = avatarIndex;
+        console.log('【joinRoom clientId重入-手动】更新 nickname:', nickname.trim(), 'avatarIndex:', avatarIndex);
+      } else {
+        console.log('【joinRoom clientId重入-自动】保持原昵称:', p.nickname);
+      }
+      await db.collection('players').doc(p._id).update({ data: updateData });
       // 旧 player 不在 playerIds 时补回
       if (!room.playerIds || !room.playerIds.includes(p._id)) {
         await db.collection('rooms').doc(room._id).update({
           data: { playerIds: _.push(p._id) },
         });
       }
+      // 重新查询拿到最新数据（nickname 可能变了）
+      const updated = await db.collection('players').doc(p._id).get();
+      console.log('【joinRoom clientId重入】更新后 nickname:', updated.data.nickname);
       return {
         code: 'OK',
-        data: { roomId: room._id, playerId: p._id, ruleId: room.ruleId, isRejoin: true },
+        data: { roomId: room._id, playerId: updated.data._id, ruleId: room.ruleId, isRejoin: true },
       };
     }
   }
@@ -109,26 +117,59 @@ exports.main = async (event) => {
       .get();
     if (existing.data.length > 0) {
       const p = existing.data[0];
-      await db.collection('players').doc(p._id).update({
-        data: { isOnline: true, lastSeenAt: now },
-      });
+      const updateData = { isOnline: true, lastSeenAt: now };
+      if (nicknameAuto === false) {
+        updateData.nickname = nickname.trim();
+        updateData.avatarIndex = avatarIndex;
+      }
+      await db.collection('players').doc(p._id).update({ data: updateData });
+      const updated = await db.collection('players').doc(p._id).get();
       return {
         code: 'OK',
-        data: { roomId: room._id, playerId: p._id, ruleId: room.ruleId, isRejoin: true },
+        data: { roomId: room._id, playerId: updated.data._id, ruleId: room.ruleId, isRejoin: true },
       };
     }
   }
 
-  // 4. 创建新 player
-  const playersRes = await db.collection('players').where({ roomId: room._id }).count();
-  const seatIndex = playersRes.total;
+  // 4. 创建新 player：分配该房间未占用的头像序号
+  const existingPlayers = await db.collection('players')
+    .where({ roomId: room._id })
+    .field({ avatarIndex: true })
+    .get();
+  const occupiedSet = new Set(existingPlayers.data.map(p => p.avatarIndex));
+
+  // 若 nicknameAuto=false（用户手动设置过昵称），昵称固定，头像取未占用
+  // 若 nicknameAuto=true/undefined（自动昵称），头像昵称一起随机
+  const isManualNickname = nicknameAuto === false;
+  const NAMES = ['东风', '南风', '西风', '北风', '红中', '白板', '发财'];
+  let assignedAvatar = avatarIndex;
+  let assignedNickname = nickname.trim();
+  if (isManualNickname) {
+    // 昵称固定，头像取未占用的
+    if (occupiedSet.has(assignedAvatar)) {
+      for (let i = 0; i <= 6; i++) {
+        if (!occupiedSet.has(i)) { assignedAvatar = i; break; }
+      }
+    }
+  } else {
+    // 随机分配头像和昵称
+    const freeNames = NAMES.filter((_, i) => !occupiedSet.has(i));
+    if (freeNames.length > 0) {
+      const pick = freeNames[Math.floor(Math.random() * freeNames.length)];
+      assignedAvatar = NAMES.indexOf(pick);
+      assignedNickname = pick;
+    } else {
+      assignedAvatar = (avatarIndex + 1) % 7;
+      assignedNickname = NAMES[assignedAvatar];
+    }
+  }
 
   const playerRes = await db.collection('players').add({
     data: {
       roomId: room._id,
-      nickname: nickname.trim(),
-      avatarIndex,
-      seatIndex,
+      nickname: assignedNickname,
+      avatarIndex: assignedAvatar,
+      seatIndex: existingPlayers.data.length,
       isOwner: false,
       openid: openid || null,
       clientId: clientId || null,
@@ -145,6 +186,6 @@ exports.main = async (event) => {
 
   return {
     code: 'OK',
-    data: { roomId: room._id, playerId: playerRes._id, ruleId: room.ruleId, isRejoin: false, seatIndex },
+    data: { roomId: room._id, playerId: playerRes._id, ruleId: room.ruleId, isRejoin: false, seatIndex: existingPlayers.data.length },
   };
 };

@@ -20,8 +20,9 @@ function watchPlayers(roomId, onChange) {
   return () => watcher.close();
 }
 
-function updatePlayer({ roomId, playerId, nickname }) {
-  return callFunction('updatePlayer', { roomId, playerId, nickname });
+function updatePlayer({ roomId, playerId, nickname, avatarIndex }) {
+  console.log('【playerService.updatePlayer】', { roomId, playerId, nickname, avatarIndex });
+  return callFunction('updatePlayer', { roomId, playerId, nickname, avatarIndex });
 }
 
 module.exports = { getPlayers, watchPlayers, updatePlayer };

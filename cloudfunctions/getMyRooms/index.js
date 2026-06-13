@@ -70,8 +70,8 @@ exports.main = async (event) => {
         closedAt: room.closedAt || null,
         closedBy: room.closedBy || null,
       };
-      // "进行中"：room 是 active 且我在房间里（isOnline）
-      if (room.status === ROOM_STATUS.ACTIVE && myPlayer.isOnline) {
+      // "进行中"：room 是 active 就显示（不看我是否在线，因为其他玩家可能还在房间里）
+      if (room.status === ROOM_STATUS.ACTIVE) {
         active.push(item);
       } else {
         finished.push(item);

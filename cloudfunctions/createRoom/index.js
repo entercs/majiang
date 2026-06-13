@@ -35,15 +35,24 @@ async function _deleteOldestPlayers(clientId, count) {
 
 exports.main = async (event, context) => {
   const { openid } = cloud.getWXContext();
-  const { nickname = '玩家', avatarIndex = 0, clientId, baseScore = 1 } = event;
+  const { nickname = '玩家', avatarIndex = 0, clientId, baseScore = 1, nicknameAuto } = event;
+  console.log('【createRoom】入参:', { nickname, avatarIndex, nicknameAuto, clientId });
 
   // 1. Validate
   if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
     return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
   }
-  if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 7) {
-    return { code: 'INVALID_INPUT', message: '头像序号 0-7', detail: 'avatarIndex' };
+  if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 6) {
+    return { code: 'INVALID_INPUT', message: '头像序号 0-6', detail: 'avatarIndex' };
   }
+
+  // 若用户手动设置过昵称，固定用传入的；否则随机分配
+  const NAMES = ['东风', '南风', '西风', '北风', '红中', '白板', '发财'];
+  const isManual = nicknameAuto === false;
+  console.log('【createRoom】isManual:', isManual, 'nicknameAuto:', nicknameAuto, 'nickname:', nickname);
+  const assignedAvatar = isManual ? avatarIndex : Math.floor(Math.random() * 7);
+  const assignedNickname = isManual ? nickname.trim() : NAMES[assignedAvatar];
+  console.log('【createRoom】assignedNickname:', assignedNickname, 'assignedAvatar:', assignedAvatar);
 
   // 2. 反滥用 + 自动清理（仅在有 clientId 时）
   if (clientId) {
@@ -131,8 +140,8 @@ exports.main = async (event, context) => {
     const playerRes = await db.collection('players').add({
       data: {
         roomId,
-        nickname: nickname.trim(),
-        avatarIndex,
+        nickname: assignedNickname,
+        avatarIndex: assignedAvatar,
         seatIndex: 0, // dealer seat
         isOwner: true,
         openid: openid || null,

@@ -1,11 +1,11 @@
 const { callFunction } = require('./cloud');
 
-function createRoom({ nickname, avatarIndex, clientId }) {
-  return callFunction('createRoom', { nickname, avatarIndex, clientId });
+function createRoom({ nickname, avatarIndex, clientId, baseScore, nicknameAuto }) {
+  return callFunction('createRoom', { nickname, avatarIndex, clientId, baseScore, nicknameAuto });
 }
 
-function joinRoom({ roomCode, nickname, avatarIndex, clientId }) {
-  return callFunction('joinRoom', { roomCode, nickname, avatarIndex, clientId });
+function joinRoom({ roomCode, nickname, avatarIndex, clientId, nicknameAuto }) {
+  return callFunction('joinRoom', { roomCode, nickname, avatarIndex, clientId, nicknameAuto });
 }
 
 function updateRule({ roomId, rule }) {

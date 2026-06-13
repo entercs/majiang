@@ -102,7 +102,7 @@ exports.main = async (event) => {
     }
 
     // 辅助算分：提交者必须是"给分者"（每人只能控制自己的扣分）
-    // 自摸：3 个非赢家任一可提交（他们都得扣分）
+    // 自摸：3 个非胡牌者任一可提交（他们都得扣分）
     // 点炮：必须是点炮者（loserId 对应的玩家）
     // 优先按 playerId 找（前端传过来），兜底按 clientId
     const caller = players.find(p => p._id === playerId)

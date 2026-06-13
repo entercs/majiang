@@ -3,7 +3,7 @@ const appStore = require('../../stores/appStore');
 const roomService = require('../../services/roomService');
 const { handleError } = require('../../services/errorHandler');
 const roomStore = require('../../stores/roomStore');
-const { pickRandomName } = require('../../services/randomName');
+const { AVATAR_NAMES } = require('../../utils/constants');
 
 const MY_ROOMS_CACHE_KEY = 'myRooms';
 const MY_ROOMS_CACHE_TTL = 5 * 60 * 1000; // 5 min
@@ -44,12 +44,7 @@ function _decorateMyRooms(data) {
 }
 
 function _ensureNickname() {
-  if (!appStore.nickname) {
-    const name = pickRandomName();
-    appStore.setProfile(name, appStore.avatarIndex || 0);
-    return name;
-  }
-  return appStore.nickname;
+  return appStore.nickname || '玩家';
 }
 
 Page({
@@ -64,6 +59,24 @@ Page({
     this.setData({
       nickname: appStore.nickname,
       avatarIndex: appStore.avatarIndex,
+    });
+  },
+
+  onEditNickname() {
+    wx.showModal({
+      title: '修改昵称',
+      editable: true,
+      placeholderText: '1-8 个字符',
+      content: appStore.nickname || '',
+      success: (modal) => {
+        if (modal.confirm && modal.content) {
+          const name = modal.content.trim();
+          if (!name || name.length > 8) return;
+          appStore.setNickname(name);
+          this.setData({ nickname: name });
+          wx.showToast({ title: '已保存', icon: 'success', duration: 1200 });
+        }
+      },
     });
   },
 
@@ -91,23 +104,16 @@ Page({
     this.setData({ nickname, pendingNickname: nickname, baseScorePopupVisible: true });
   },
 
-  onBaseScoreConfirm(e) {
-    const baseScore = e.detail.value;
-    this.setData({ baseScorePopupVisible: false });
-    this._doCreateRoom(this.data.pendingNickname, baseScore);
-  },
-
-  onBaseScoreCancel() {
-    this.setData({ baseScorePopupVisible: false });
-  },
-
   _doCreateRoom(nickname, baseScore) {
+    console.log('【home _doCreateRoom】nickname:', nickname, '!nickname:', !nickname, 'appStore.nickname:', appStore.nickname, 'pendingNickname:', this.data.pendingNickname);
     wx.showLoading({ title: '创建中...' });
     roomService.createRoom({
       nickname,
       avatarIndex: appStore.avatarIndex || 0,
       clientId: appStore.clientId,
       baseScore,
+      // 有自定义昵称 → 手动模式（需同步）；没有 → 自动模式（随机分配）
+      nicknameAuto: !nickname,
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
@@ -129,8 +135,19 @@ Page({
     });
   },
 
+  onBaseScoreConfirm(e) {
+    console.log('【onBaseScoreConfirm】pendingNickname:', this.data.pendingNickname);
+    const baseScore = e.detail.value;
+    this.setData({ baseScorePopupVisible: false });
+    this._doCreateRoom(this.data.pendingNickname, baseScore);
+  },
+
+  onBaseScoreCancel() {
+    this.setData({ baseScorePopupVisible: false });
+  },
+
   onJoinRoom() {
-    const nickname = _ensureNickname();
+    const nickname = appStore.nickname || '玩家';
     this.setData({ nickname });
     wx.showModal({
       title: '加入牌局',
@@ -147,13 +164,15 @@ Page({
   // 点击"进行中"分区某条：重入房间（joinRoom 会找到旧 player）
   onTapActive(e) {
     const { roomid, roomcode } = e.currentTarget.dataset;
-    const nickname = _ensureNickname();
+    const nickname = appStore.nickname || '玩家';
     wx.showLoading({ title: '加入中...' });
     roomService.joinRoom({
       roomCode: roomcode,
       nickname,
       avatarIndex: appStore.avatarIndex || 0,
       clientId: appStore.clientId,
+      // 有自定义昵称 → 手动模式（需同步）；没有 → 自动模式
+      nicknameAuto: !appStore.nickname,
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
@@ -177,6 +196,8 @@ Page({
       nickname,
       avatarIndex: appStore.avatarIndex || 0,
       clientId: appStore.clientId,
+      // 有自定义昵称 → 手动模式（需同步）；没有 → 自动模式
+      nicknameAuto: !appStore.nickname,
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
@@ -190,24 +211,7 @@ Page({
     });
   },
 
-  // 修改昵称
-  onEditNickname() {
-    wx.showModal({
-      title: '修改昵称',
-      editable: true,
-      placeholderText: '1-8 个字符',
-      success: (modal) => {
-        if (modal.confirm && modal.content) {
-          const name = modal.content.trim();
-          if (!name) return;
-          appStore.setProfile(name, appStore.avatarIndex || 0);
-          this.setData({ nickname: name });
-          wx.showToast({ title: '已保存', icon: 'success', duration: 1200 });
-        }
-      },
-    });
-  },
-
+  
   onShowHelp() {
     wx.showModal({
       title: '使用帮助',

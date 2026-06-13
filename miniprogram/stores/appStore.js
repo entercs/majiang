@@ -1,6 +1,6 @@
 const { observable } = require('./observable');
 const { getProfile, getOrCreateAnonymousUser } = require('../services/userService');
-const { pickRandomName } = require('../services/randomName');
+const { AVATAR_NAMES } = require('../utils/constants');
 
 const store = observable({
   clientId: '',
@@ -14,16 +14,12 @@ const store = observable({
     this.clientId = profile.clientId || getOrCreateAnonymousUser().clientId;
     this.openid = profile.openid;
     this.isAnonymous = profile.isAnonymous;
-    // 首次进入：随机分配麻将术语风昵称
+    // 昵称独立存储（可编辑）；优先读 customNickname（新 key），兜底读 nickname（旧 key）
+    const customStored = wx.getStorageSync('customNickname');
     const stored = wx.getStorageSync('nickname');
-    if (stored) {
-      this.nickname = stored;
-    } else {
-      const randomName = pickRandomName();
-      wx.setStorageSync('nickname', randomName);
-      this.nickname = randomName;
-    }
-    this.avatarIndex = wx.getStorageSync('avatarIndex') || 0;
+    this.nickname = customStored || stored || '';
+    // 首页固定显示"发财"头像
+    this.avatarIndex = 6;
   },
 
   setProfile(nickname, avatarIndex) {
@@ -31,6 +27,14 @@ const store = observable({
     this.avatarIndex = avatarIndex;
     wx.setStorageSync('nickname', nickname);
     wx.setStorageSync('avatarIndex', avatarIndex);
+  },
+
+  setNickname(nickname) {
+    this.nickname = nickname;
+    // 统一写到 customNickname（房间弹窗读取这个 key）
+    wx.setStorageSync('customNickname', nickname);
+    // nickname 也保留一份（兼容其他地方可能还在读这个 key）
+    wx.setStorageSync('nickname', nickname);
   },
 
   setOpenid(openid) {

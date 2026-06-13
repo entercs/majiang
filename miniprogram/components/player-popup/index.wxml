@@ -1,10 +1,69 @@
-<view class="popup-mask" bind:tap="onMaskTap">
-  <view class="popup-panel" catch:tap>
-    <image class="avatar" src="/images/avatars/avatar-{{avatarIndex || 0}}.png" mode="aspectFit"></image>
-    <text class="nick">{{nickname}}</text>
-    <text class="score">{{totalScore}} 分</text>
+<view class="popup-mask" bindtap="onMaskTap">
+  <view class="popup-panel" catchtap="noop">
+    <!-- 头像网格：上行3个（红中/白板/发财），下行4个（东风/南风/西风/北风） -->
+    <view class="avatar-grid">
+      <view class="avatar-row">
+        <view class="avatar-item {{avatarIndex === 4 ? 'selected' : ''}}" data-idx="4" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-4.png" mode="aspectFit"></image>
+          <text class="avatar-name">红中</text>
+        </view>
+        <view class="avatar-item {{avatarIndex === 5 ? 'selected' : ''}}" data-idx="5" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-5.png" mode="aspectFit"></image>
+          <text class="avatar-name">白板</text>
+        </view>
+        <view class="avatar-item {{avatarIndex === 6 ? 'selected' : ''}}" data-idx="6" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-6.png" mode="aspectFit"></image>
+          <text class="avatar-name">发财</text>
+        </view>
+      </view>
+      <view class="avatar-row">
+        <view class="avatar-item {{avatarIndex === 0 ? 'selected' : ''}}" data-idx="0" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-0.png" mode="aspectFit"></image>
+          <text class="avatar-name">东风</text>
+        </view>
+        <view class="avatar-item {{avatarIndex === 1 ? 'selected' : ''}}" data-idx="1" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-1.png" mode="aspectFit"></image>
+          <text class="avatar-name">南风</text>
+        </view>
+        <view class="avatar-item {{avatarIndex === 2 ? 'selected' : ''}}" data-idx="2" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-2.png" mode="aspectFit"></image>
+          <text class="avatar-name">西风</text>
+        </view>
+        <view class="avatar-item {{avatarIndex === 3 ? 'selected' : ''}}" data-idx="3" catchtap="onTapAvatar">
+          <image class="avatar-img" src="/images/avatars/avatar-3.png" mode="aspectFit"></image>
+          <text class="avatar-name">北风</text>
+        </view>
+      </view>
+    </view>
 
-    <button class="popup-btn default" bind:tap="onEditNickname">修改昵称</button>
-    <button class="popup-btn danger" bind:tap="onFinishRoom">结束本局</button>
+    <!-- 昵称选择区 -->
+    <view class="nickname-section">
+      <!-- 系统昵称行 -->
+      <view class="nickname-row">
+        <view class="nickname-radio {{selectedNicknameType === 'system' ? 'selected' : ''}}" catchtap="onSelectNicknameType" data-type="system"></view>
+        <text class="nickname-label">系统昵称</text>
+        <input class="nickname-value readonly" type="text" value="{{systemNickname}}" disabled />
+      </view>
+      <!-- 自定义昵称行 -->
+      <view class="nickname-row">
+        <view class="nickname-radio {{selectedNicknameType === 'custom' ? 'selected' : ''}}" catchtap="onSelectNicknameType" data-type="custom"></view>
+        <text class="nickname-label">自定义昵称</text>
+        <input
+          class="nickname-value {{selectedNicknameType === 'custom' ? 'editable' : 'readonly'}}"
+          type="text"
+          value="{{inputNickname}}"
+          disabled="{{selectedNicknameType !== 'custom'}}"
+          bindinput="onNicknameInput"
+          placeholder="输入自定义昵称"
+          maxlength="8"
+        />
+      </view>
+    </view>
+
+    <!-- 取消/确认按钮 -->
+    <view class="popup-btns">
+      <button class="popup-btn cancel" bindtap="onMaskTap">取消</button>
+      <button class="popup-btn confirm" bindtap="onConfirm">确认</button>
+    </view>
   </view>
 </view>

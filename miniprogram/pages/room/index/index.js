@@ -285,44 +285,6 @@ Page({
     return true; // 阻止默认返回
   },
 
-  // 修改昵称（云端同步）
-  _showEditNicknameModal() {
-    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
-    if (!me) {
-      wx.showToast({ title: '无法识别你的玩家身份', icon: 'none' });
-      return;
-    }
-    wx.showModal({
-      title: '修改昵称',
-      editable: true,
-      placeholderText: '1-8 个字符',
-      success: (modal) => {
-        if (modal.confirm && modal.content) {
-          const name = modal.content.trim();
-          if (!name) return;
-          appStore.setProfile(name, appStore.avatarIndex || 0);
-          // 云端同步
-          playerService.updatePlayer({
-            roomId: roomStore.roomId,
-            playerId: me._id,
-            nickname: name,
-          }).then((res) => {
-            if (res.code === 'OK') {
-              wx.showToast({ title: '已保存', icon: 'success', duration: 1000 });
-              // 立即更新本地 store 中的该玩家
-              roomStore.players = roomStore.players.map(p =>
-                p._id === me._id ? { ...p, nickname: name } : p
-              );
-              this._render();
-            } else {
-              handleError({ code: res.code, message: res.message }, this);
-            }
-          }).catch(err => handleError(err, this));
-        }
-      },
-    });
-  },
-
   onAutoScore() {
     wx.navigateTo({ url: '/pages/room/auto-score/index' });
   },
@@ -384,9 +346,80 @@ Page({
     this.setData({ selfPopupVisible: false });
   },
 
-  onSelfPopupEditNickname() {
+  onSelfEditNick() {
     this.setData({ selfPopupVisible: false });
-    this._showEditNicknameModal();
+    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
+    if (!me) {
+      wx.showToast({ title: '无法识别你的玩家身份', icon: 'none' });
+      return;
+    }
+    wx.showModal({
+      title: '修改昵称',
+      editable: true,
+      placeholderText: '1-8 个字符',
+      content: me.nickname || '',
+      success: (modal) => {
+        if (modal.confirm && modal.content) {
+          const name = modal.content.trim();
+          if (!name || name.length > 8) return;
+          playerService.updatePlayer({
+            roomId: roomStore.roomId,
+            playerId: me._id,
+            nickname: name,
+            avatarIndex: me.avatarIndex,
+          }).then(() => {
+            roomStore.players = roomStore.players.map(p =>
+              p._id === me._id ? { ...p, nickname: name } : p
+            );
+            appStore.setNickname(name);
+            this._render();
+            wx.showToast({ title: '已保存', icon: 'success', duration: 1200 });
+          });
+        }
+      },
+    });
+  },
+
+  onSelfAvatarChange(e) {
+    const { avatarIndex } = e.detail;
+    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
+    if (!me) return;
+    // 头像变化时更新本地玩家对象（昵称由用户确认时再定）
+    roomStore.players = roomStore.players.map(p =>
+      p._id === me._id ? { ...p, avatarIndex } : p
+    );
+    // 同步更新弹窗目标数据（不关闭弹窗）
+    this.setData({
+      selfPopupTarget: { ...this.data.selfPopupTarget, avatarIndex },
+    });
+    this._render();
+  },
+
+  onSelfPopupConfirm(e) {
+    const { nickname, avatarIndex, selectedNicknameType } = e.detail;
+    console.log('【room onSelfPopupConfirm】received', { nickname, avatarIndex, selectedNicknameType });
+    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
+    if (!me) return;
+    // 调用云端更新
+    playerService.updatePlayer({
+      roomId: roomStore.roomId,
+      playerId: me._id,
+      nickname,
+      avatarIndex,
+    }).then(() => {
+      // 更新本地玩家对象
+      roomStore.players = roomStore.players.map(p =>
+        p._id === me._id ? { ...p, nickname, avatarIndex } : p
+      );
+      // 如果选择了自定义昵称，保存到本地存储
+      if (selectedNicknameType === 'custom') {
+        wx.setStorageSync('customNickname', nickname);
+        appStore.setNickname(nickname);
+      }
+      this.setData({ selfPopupVisible: false });
+      this._render();
+      wx.showToast({ title: '已保存', icon: 'success', duration: 1200 });
+    });
   },
 
   onSelfPopupLeaveRoom() {
