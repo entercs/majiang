@@ -43,12 +43,23 @@ exports.main = async (event) => {
     data: { isOnline: false, lastSeenAt: Date.now() },
   });
 
-  // 4) 查剩余在线人数（事务外可用）
+  // 4) 查剩余在线人数
   const onlineRes = await db.collection('players')
     .where({ roomId, isOnline: true })
     .limit(10)
     .get();
   const onlineCount = onlineRes.data.length;
+
+  // 5) 空房标记：无人在线 → 设 emptyAt 开始 5 分钟倒计时；还有人 → 清除空房标记
+  if (onlineCount === 0) {
+    await db.collection('rooms').doc(roomId).update({
+      data: { emptyAt: Date.now() },
+    });
+  } else {
+    await db.collection('rooms').doc(roomId).update({
+      data: { emptyAt: _.remove() },
+    });
+  }
 
   return { code: 'OK', data: { onlineCount } };
 };

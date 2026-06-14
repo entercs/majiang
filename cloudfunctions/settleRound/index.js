@@ -150,5 +150,10 @@ exports.main = async (event) => {
   const addRes = await db.collection('rounds').add({ data: roundDoc });
   roundDoc._id = addRes._id;
 
+  // 8. 刷新房间 lastActivityAt（给 autoCloseTimeout 30 分钟检查提供准确时间戳）
+  await db.collection('rooms').doc(roomId).update({
+    data: { lastActivityAt: roundDoc.createdAt },
+  });
+
   return { code: 'OK', data: roundDoc };
 };

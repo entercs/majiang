@@ -1,18 +1,18 @@
 const cloud = require('wx-server-sdk');
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+cloud.init({ env: 'majing-d6gx0f5mm301172e1' });
 const db = cloud.database();
 const _ = db.command;
 const { ROOM_STATUS } = require('./_shared/constants');
 
 // 30 分钟无活动 → 自动关闭
-const TIMEOUT_MS = 30 * 60 * 1000;
+const INACTIVE_TIMEOUT_MS = 30 * 60 * 1000;
+// 空房（0 人在线）5 分钟 → 自动关闭
+const EMPTY_TIMEOUT_MS = 5 * 60 * 1000;
 
 exports.main = async () => {
-  const cutoff = Date.now() - TIMEOUT_MS;
+  const now = Date.now();
+  const inactiveCutoff = now - INACTIVE_TIMEOUT_MS;
 
-  // 找所有 status=active 且 最后 round.createdAt < cutoff 的房间
-  // 简化：先找所有 active 房间，再逐个检查 lastActivityAt
-  // （数据库没法 join rounds，只能这样）
   const roomsRes = await db.collection('rooms')
     .where({ status: ROOM_STATUS.ACTIVE })
     .limit(100)
@@ -20,25 +20,43 @@ exports.main = async () => {
 
   let closed = 0;
   for (const room of roomsRes.data) {
-    // 取该房间内所有 isOnline=true 的 player 数量
-    const onlineRes = await db.collection('players')
-      .where({ roomId: room._id, isOnline: true })
-      .count();
+    // ─── 分支 A：空房 5 分钟关停 ───
+    // emptyAt 由 leaveRoom 在最后一人离线时写入，joinRoom 重入时清除
+    // 所以 emptyAt 存在等价于房间无人
+    if (room.emptyAt != null) {
+      if (room.emptyAt + EMPTY_TIMEOUT_MS <= now) {
+        await db.collection('rooms').doc(room._id).update({
+          data: {
+            status: ROOM_STATUS.FINISHED,
+            closedAt: now,
+            closedBy: 'auto-empty',
+          },
+        });
+        closed++;
+      }
+      continue;
+    }
 
-    // 取最后一笔 round 的 createdAt
+    // ─── 分支 B：30 分钟无活动关停 ───
+    // 取最后活动时间的基准：room.lastActivityAt（settleRound 更新）或 room.createdAt
+    const lastActivityAt = room.lastActivityAt || room.createdAt;
+    if (lastActivityAt >= inactiveCutoff) continue; // 最近有活动，跳过
+
+    // 兜底：去查 rounds 表取最后一笔的时间（兼容没有 lastActivityAt 的旧房间）
     const lastRoundRes = await db.collection('rounds')
       .where({ roomId: room._id })
       .orderBy('createdAt', 'desc')
       .limit(1)
       .get();
-    const lastRoundAt = lastRoundRes.data.length > 0 ? lastRoundRes.data[0].createdAt : room.createdAt;
+    const finalActivity = lastRoundRes.data.length > 0
+      ? Math.max(lastRoundRes.data[0].createdAt, lastActivityAt)
+      : lastActivityAt;
 
-    // 触发条件：距最后活动 > 30 分钟（不检查是否在线）
-    if (lastRoundAt < cutoff) {
+    if (finalActivity < inactiveCutoff) {
       await db.collection('rooms').doc(room._id).update({
         data: {
           status: ROOM_STATUS.FINISHED,
-          closedAt: Date.now(),
+          closedAt: now,
           closedBy: 'auto-timeout',
         },
       });
@@ -51,7 +69,7 @@ exports.main = async () => {
     data: {
       scanned: roomsRes.data.length,
       closed,
-      cutoffTime: new Date(cutoff).toISOString(),
+      time: new Date(now).toISOString(),
     },
   };
 };

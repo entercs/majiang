@@ -72,6 +72,13 @@ exports.main = async (event) => {
 
   const now = Date.now();
 
+  // 1.5 有人（重）入房间 → 清除空房标记，取消 5 分钟关房倒计时
+  if (room.emptyAt != null) {
+    await db.collection('rooms').doc(room._id).update({
+      data: { emptyAt: _.remove() },
+    });
+  }
+
   // 2. 优先按 clientId 重入
   if (clientId) {
     const existing = await db.collection('players')

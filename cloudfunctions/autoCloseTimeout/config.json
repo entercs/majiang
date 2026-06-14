@@ -6,7 +6,8 @@
     {
       "name": "autoCloseTimer",
       "type": "timer",
-      "config": "0 */5 * * * * *"
+      "config": "0 */5 * * * *"
     }
-  ]
+  ],
+  "timeout": 30
 }
