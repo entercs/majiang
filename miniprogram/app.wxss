@@ -4,16 +4,45 @@
    全局设计系统 - 轻国风简约工具风
    ======================== */
 
-/* 2.1 配色体系 */
+/* ========================
+   :root CSS 变量层
+   ======================== */
+:root {
+  /* 配色体系 */
+  --color-primary: #0F7A38;
+  --color-primary-light: #2BA85A;
+  --color-primary-pale: #E8F5ED;
+  --color-danger: #D32F2F;
+  --color-gold: #C8A96E;
+  --color-bg: #F7F5F0;
+  --color-card: #FFFFFF;
+  --color-border: #EEEEEE;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-text-muted: #999999;
+
+  /* 圆角规范 */
+  --radius-lg: 32rpx;
+  --radius-md: 24rpx;
+  --radius-sm: 16rpx;
+
+  /* 阴影规范 */
+  --shadow-card: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 16rpx 64rpx rgba(0, 0, 0, 0.12);
+  --shadow-btn: 0 4rpx 16rpx rgba(15, 122, 56, 0.2);
+}
+
+/* ========================
+   page 基础样式
+   ======================== */
 page {
-  background: #F7F5F0;  /* 暖米白页面底色 */
+  background: var(--color-bg);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* 2.2 圆角与阴影规范 */
 .container {
   display: flex;
   flex-direction: column;
@@ -37,9 +66,9 @@ button::after {
    全局通用组件类
    ======================== */
 
-/* 2.3 主按钮 */
+/* 主按钮 */
 .btn-primary {
-  background: linear-gradient(90deg, #0F7A38, #2BA85A);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
   color: #fff;
   font-size: 32rpx;
   font-weight: 500;
@@ -48,7 +77,7 @@ button::after {
   align-items: center;
   justify-content: center;
   border-radius: 20rpx;
-  box-shadow: 0 4rpx 16rpx rgba(15, 122, 56, 0.2);
+  box-shadow: var(--shadow-btn);
   border: none;
   padding: 0 32rpx;
 }
@@ -59,10 +88,10 @@ button::after {
   opacity: 0.8;
 }
 
-/* 2.4 次按钮 */
+/* 次按钮 */
 .btn-default {
-  background: #fff;
-  color: #0F7A38;
+  background: var(--color-card);
+  color: var(--color-primary);
   font-size: 32rpx;
   font-weight: 500;
   height: 100rpx;
@@ -70,7 +99,7 @@ button::after {
   align-items: center;
   justify-content: center;
   border-radius: 20rpx;
-  border: 2rpx solid #0F7A38;
+  border: 2rpx solid var(--color-primary);
   padding: 0 32rpx;
 }
 .btn-default::after {
@@ -80,61 +109,135 @@ button::after {
   opacity: 0.8;
 }
 
-/* 2.5 标签选择器 */
+/* 标签选择器 */
 .tag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 72rpx;
   padding: 0 24rpx;
-  background: #fff;
-  border: 2rpx solid #EEEEEE;
-  border-radius: 16rpx;
+  background: var(--color-card);
+  border: 2rpx solid var(--color-border);
+  border-radius: var(--radius-sm);
   font-size: 28rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   box-sizing: border-box;
 }
 .tag.active {
-  background: #E8F5ED;
-  color: #0F7A38;
+  background: var(--color-primary-pale);
+  color: var(--color-primary);
   border: none;
 }
 .tag:active {
   opacity: 0.8;
 }
 
-/* 2.6 内容卡片 */
+/* 内容卡片 */
 .card {
-  background: #fff;
-  border-radius: 32rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   padding: 32rpx;
   box-sizing: border-box;
 }
 
-/* 2.7 弹窗容器 */
+/* 弹窗容器 */
 .modal {
-  background: #fff;
-  border-radius: 32rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
   width: 80%;
   padding: 40rpx;
   box-sizing: border-box;
-  box-shadow: 0 16rpx 64rpx rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-modal);
 }
 
 /* ========================
    文字颜色辅助类
    ======================== */
-.text-primary { color: #0F7A38; }
-.text-secondary { color: #666666; }
-.text-muted { color: #999999; }
-.text-danger { color: #D32F2F; }
-.text-gold { color: #C8A96E; }
-.text-dark { color: #1A1A1A; }
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted { color: var(--color-text-muted); }
+.text-danger { color: var(--color-danger); }
+.text-gold { color: var(--color-gold); }
+.text-dark { color: var(--color-text-primary); }
 
 /* 正负分颜色 */
-.score-pos { color: #0F7A38; }
-.score-neg { color: #D32F2F; }
+.score-pos { color: var(--color-primary); }
+.score-neg { color: var(--color-danger); }
+
+/* ========================
+   文字工具类体系
+   ======================== */
+
+/* 品牌大标题 - 64rpx / 700 / 1.2 */
+.text-brand {
+  font-size: 64rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* 强调数字 - 40~48rpx / 600 / 1.3 */
+.text-num {
+  font-size: 44rpx;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* 页面导航标题 - 34rpx / 500 / 1.4 */
+.text-nav {
+  font-size: 34rpx;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* 模块标题 - 32rpx / 500 / 1.4 */
+.text-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* 按钮文字 - 32rpx / 500 / 1 */
+.text-btn {
+  font-size: 32rpx;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* 正文主内容 - 30rpx / 400 / 1.5 */
+.text-body {
+  font-size: 30rpx;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* 标签文字 - 28rpx / 400 / 1 */
+.text-tag {
+  font-size: 28rpx;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* 辅助说明 - 26rpx / 400 / 1.5 */
+.text-caption {
+  font-size: 26rpx;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ========================
+   功能工具类
+   ======================== */
+
+/* 等宽数字 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 对齐工具类 */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
 /* ========================
    分割线
@@ -142,5 +245,5 @@ button::after {
 .divider {
   width: 100%;
   height: 2rpx;
-  background: #EEEEEE;
+  background: var(--color-border);
 }
