@@ -1,7 +1,7 @@
 .popup-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,36 +10,19 @@
 
 .popup-panel {
   background: #fff;
-  border-radius: 24rpx;
+  border-radius: 32rpx;
   padding: 40rpx 32rpx 32rpx;
   width: 80%;
   max-width: 600rpx;
   box-sizing: border-box;
-}
-
-/* 当前头像大图 */
-.avatar-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 24rpx;
-}
-
-.avatar-large {
-  width: 128rpx;
-  height: 128rpx;
-  border-radius: 50%;
-}
-
-.nickname-display {
-  margin-top: 12rpx;
-  font-size: 30rpx;
-  color: #333;
-  font-weight: 500;
+  box-shadow: 0 16rpx 64rpx rgba(0, 0, 0, 0.12);
 }
 
 /* 头像网格 */
-.avatar-grid { width: 100%; }
+.avatar-grid {
+  width: 100%;
+  margin-bottom: 32rpx;
+}
 
 .avatar-row {
   display: flex;
@@ -48,7 +31,9 @@
   margin-bottom: 16rpx;
 }
 
-.avatar-row:last-child { margin-bottom: 0; }
+.avatar-row:last-child {
+  margin-bottom: 0;
+}
 
 .avatar-item {
   display: flex;
@@ -57,10 +42,12 @@
   gap: 8rpx;
 }
 
-.avatar-item:active { opacity: 0.65; }
+.avatar-item:active {
+  opacity: 0.65;
+}
 
 .avatar-item.selected .avatar-img {
-  border: 4rpx solid #1aad19;
+  border: 4rpx solid #0F7A38;
   border-radius: 50%;
   padding: 2rpx;
   box-sizing: border-box;
@@ -73,40 +60,22 @@
 }
 
 .avatar-name {
-  font-size: 22rpx;
-  color: #333;
+  font-size: 26rpx;
+  color: #666666;
 }
 
-/* 输入框 */
-.nickname-input {
-  width: 100%;
-  height: 80rpx;
-  line-height: 80rpx;
-  background: #f5f5f5;
-  border-radius: 12rpx;
-  padding: 0 24rpx;
-  box-sizing: border-box;
-  font-size: 28rpx;
-  color: #333;
-  margin-top: 24rpx;
-}
-
-/* 按钮 */
 /* 昵称选择区 */
 .nickname-section {
   width: 100%;
   margin-top: 24rpx;
+  border-top: 2rpx solid #EEEEEE;
+  padding-top: 24rpx;
 }
 
 .nickname-row {
   display: flex;
   align-items: center;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
-}
-
-.nickname-row:last-child {
-  border-bottom: none;
 }
 
 .nickname-radio {
@@ -114,13 +83,13 @@
   height: 40rpx;
   margin-right: 16rpx;
   border-radius: 50%;
-  border: 2rpx solid #ccc;
+  border: 2rpx solid #CCCCCC;
   flex-shrink: 0;
   position: relative;
 }
 
 .nickname-radio.selected {
-  border-color: #1aad19;
+  border-color: #0F7A38;
 }
 
 .nickname-radio.selected::after {
@@ -132,12 +101,12 @@
   width: 20rpx;
   height: 20rpx;
   border-radius: 50%;
-  background: #1aad19;
+  background: #0F7A38;
 }
 
 .nickname-label {
   font-size: 26rpx;
-  color: #666;
+  color: #666666;
   width: 140rpx;
   flex-shrink: 0;
 }
@@ -145,22 +114,22 @@
 .nickname-value {
   flex: 1;
   font-size: 28rpx;
-  color: #333;
-  background: #f5f5f5;
-  border-radius: 8rpx;
-  padding: 0 16rpx;
-  height: 64rpx;
-  line-height: 64rpx;
+  color: #1A1A1A;
+  background: #F5F5F5;
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  height: 72rpx;
+  line-height: 72rpx;
   box-sizing: border-box;
 }
 
 .nickname-value.editable {
   background: #fff;
-  border: 2rpx solid #1aad19;
+  border: 2rpx solid #0F7A38;
 }
 
 .nickname-value.readonly {
-  color: #888;
+  color: #888888;
 }
 
 /* 按钮 */
@@ -168,23 +137,32 @@
   display: flex;
   gap: 16rpx;
   width: 100%;
-  margin-top: 24rpx;
+  margin-top: 32rpx;
 }
 
 .popup-btn {
   flex: 1;
-  height: 80rpx;
-  line-height: 80rpx;
-  border-radius: 12rpx;
-  font-size: 28rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  border: none;
 }
 
 .popup-btn.cancel {
-  background: #f5f5f5;
-  color: #333;
+  background: #F5F5F5;
+  color: #666666;
 }
 
 .popup-btn.confirm {
-  background: #1aad19;
+  background: linear-gradient(90deg, #0F7A38, #2BA85A);
   color: #fff;
+  box-shadow: 0 4rpx 16rpx rgba(15, 122, 56, 0.2);
+}
+
+.popup-btn::after {
+  border: none;
 }

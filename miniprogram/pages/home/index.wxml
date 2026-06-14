@@ -1,6 +1,8 @@
 <view class="home">
+  <!-- 品牌标题区 -->
   <view class="hero">
     <text class="title">胡了么</text>
+    <text class="title-underline"></text>
   </view>
 
   <!-- 底分选择弹窗 -->
@@ -12,16 +14,19 @@
     bind:cancel="onBaseScoreCancel"
   ></base-score-popup>
 
+  <!-- 用户信息卡片 -->
   <view class="profile" bindtap="onEditNickname">
     <image class="avatar" src="/images/avatars/avatar-{{avatarIndex || 0}}.png" mode="aspectFit"></image>
     <text class="nick">{{nickname || '点击设置昵称'}}</text>
   </view>
 
+  <!-- 操作按钮组 -->
   <view class="actions">
     <button class="btn primary" bindtap="onCreateRoom">创建牌局</button>
     <button class="btn default" bindtap="onJoinRoom">加入牌局</button>
   </view>
 
+  <!-- 进行中牌局列表 -->
   <view class="my-rooms" wx:if="{{myRooms.active.length > 0}}">
     <view class="section-title">进行中</view>
     <view class="room-list">
@@ -33,6 +38,7 @@
     </view>
   </view>
 
+  <!-- 已结束牌局列表 -->
   <view class="my-rooms" wx:if="{{myRooms.finished.length > 0}}">
     <view class="section-title">已结束</view>
     <view class="room-list">
@@ -46,6 +52,7 @@
     </view>
   </view>
 
+  <!-- 底部帮助 -->
   <view class="help-row">
     <text class="help-link" bindtap="onShowHelp">帮助</text>
   </view>

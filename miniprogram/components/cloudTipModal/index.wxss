@@ -4,16 +4,15 @@
   right: 0;
   bottom: 0;
   left: 0;
-  background-color: rgba(0,0,0,0.4);
+  background-color: rgba(0, 0, 0, 0.7);
   z-index: 1;
 }
-.install_tip_close{
-  position:absolute;
+.install_tip_close {
+  position: absolute;
   right: 10rpx;
   top: 10rpx;
   width: 32px;
   height: 32px;
-  /* background-color: red; */
 }
 .install_tip_detail {
   position: fixed;
@@ -27,14 +26,15 @@
 }
 
 .install_tip_detail_title {
-  font-weight: 400;
+  font-weight: 500;
   font-size: 40rpx;
   text-align: center;
+  color: #1A1A1A;
 }
 
 .install_tip_detail_tip {
   font-size: 25rpx;
-  color: rgba(0,0,0,0.4);
+  color: #999999;
   margin-top: 20rpx;
   text-align: left;
 }
@@ -43,18 +43,16 @@
   display: flex;
 }
 .install_tip_detail_button {
-  color: #07C160;
+  color: #0F7A38;
   font-weight: 500;
-  background-color: rgba(0,0,0,0.1);
+  background-color: rgba(0, 0, 0, 0.1);
   width: 40%;
   text-align: center;
-  /* height: 90rpx; */
-  /* line-height: 90rpx; */
-  border-radius: 10rpx;
+  border-radius: 20rpx;
   margin: 0 auto;
 }
 
 .install_tip_detail_button_primary {
-  background-color: #07C160;
+  background-color: linear-gradient(90deg, #0F7A38, #2BA85A);
   color: #fff;
 }

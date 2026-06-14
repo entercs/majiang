@@ -1,27 +1,146 @@
 /**app.wxss**/
+
+/* ========================
+   全局设计系统 - 轻国风简约工具风
+   ======================== */
+
+/* 2.1 配色体系 */
+page {
+  background: #F7F5F0;  /* 暖米白页面底色 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* 2.2 圆角与阴影规范 */
 .container {
   display: flex;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
-} 
+}
 
 button {
   background: initial;
 }
 
-button:focus{
+button:focus {
   outline: 0;
 }
 
-button::after{
+button::after {
   border: none;
 }
 
+/* ========================
+   全局通用组件类
+   ======================== */
 
-page {
-  background: #f6f6f6;
+/* 2.3 主按钮 */
+.btn-primary {
+  background: linear-gradient(90deg, #0F7A38, #2BA85A);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 500;
+  height: 100rpx;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 122, 56, 0.2);
+  border: none;
+  padding: 0 32rpx;
+}
+.btn-primary::after {
+  border: none;
+}
+.btn-primary:active {
+  opacity: 0.8;
+}
+
+/* 2.4 次按钮 */
+.btn-default {
+  background: #fff;
+  color: #0F7A38;
+  font-size: 32rpx;
+  font-weight: 500;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  border: 2rpx solid #0F7A38;
+  padding: 0 32rpx;
+}
+.btn-default::after {
+  border: none;
+}
+.btn-default:active {
+  opacity: 0.8;
+}
+
+/* 2.5 标签选择器 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 72rpx;
+  padding: 0 24rpx;
+  background: #fff;
+  border: 2rpx solid #EEEEEE;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  color: #666666;
+  box-sizing: border-box;
+}
+.tag.active {
+  background: #E8F5ED;
+  color: #0F7A38;
+  border: none;
+}
+.tag:active {
+  opacity: 0.8;
+}
+
+/* 2.6 内容卡片 */
+.card {
+  background: #fff;
+  border-radius: 32rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+/* 2.7 弹窗容器 */
+.modal {
+  background: #fff;
+  border-radius: 32rpx;
+  width: 80%;
+  padding: 40rpx;
+  box-sizing: border-box;
+  box-shadow: 0 16rpx 64rpx rgba(0, 0, 0, 0.12);
+}
+
+/* ========================
+   文字颜色辅助类
+   ======================== */
+.text-primary { color: #0F7A38; }
+.text-secondary { color: #666666; }
+.text-muted { color: #999999; }
+.text-danger { color: #D32F2F; }
+.text-gold { color: #C8A96E; }
+.text-dark { color: #1A1A1A; }
+
+/* 正负分颜色 */
+.score-pos { color: #0F7A38; }
+.score-neg { color: #D32F2F; }
+
+/* ========================
+   分割线
+   ======================== */
+.divider {
+  width: 100%;
+  height: 2rpx;
+  background: #EEEEEE;
 }
