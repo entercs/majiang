@@ -33,8 +33,8 @@ exports.main = async () => {
       .get();
     const lastRoundAt = lastRoundRes.data.length > 0 ? lastRoundRes.data[0].createdAt : room.createdAt;
 
-    // 触发条件：所有玩家都离线 + 距最后活动 > 30 分钟
-    if (onlineRes.total === 0 && lastRoundAt < cutoff) {
+    // 触发条件：距最后活动 > 30 分钟（不检查是否在线）
+    if (lastRoundAt < cutoff) {
       await db.collection('rooms').doc(room._id).update({
         data: {
           status: ROOM_STATUS.FINISHED,
