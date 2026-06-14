@@ -64,6 +64,8 @@ Component({
       this.setData({ inputNickname: e.detail.value });
     },
 
+    noop() {},
+
     onEditNick() {
       this.triggerEvent('editnick');
     },

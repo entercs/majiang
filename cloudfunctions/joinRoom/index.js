@@ -41,11 +41,19 @@ exports.main = async (event) => {
   if (typeof roomCode !== 'string' || !/^\d{6}$/.test(roomCode)) {
     return { code: 'INVALID_INPUT', message: '房间号格式错误', detail: 'roomCode' };
   }
-  if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
-    return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
-  }
   if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 6) {
     return { code: 'INVALID_INPUT', message: '头像序号 0-6', detail: 'avatarIndex' };
+  }
+
+  // 自动模式（nicknameAuto 不为 false）跳过昵称校验，由系统分配
+  if (nicknameAuto !== false) {
+    if (typeof nickname !== 'string' || nickname.length > 8) {
+      return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
+    }
+  } else {
+    if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
+      return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
+    }
   }
 
   // 0. 反滥用：累计加入房间数（仅对"新加入"生效——重入不计）

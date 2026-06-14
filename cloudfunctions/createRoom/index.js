@@ -7,7 +7,7 @@ const { generateUniqueRoomCode } = require('./_shared/cloud-id');
 const { getDefaultRule } = require('./_shared/ruleService');
 const { ROOM_STATUS } = require('./_shared/constants');
 
-const RATE_LIMIT_MS = 30 * 1000;        // 同一 clientId 30s 内只能创建 1 次
+const RATE_LIMIT_MS = 10 * 1000;        // 同一 clientId 10s 内只能创建 1 次
 const MAX_ACTIVE_ROOMS = 3;             // 同一 clientId 最多 3 个 active 房间
 const MAX_JOINED_ROOMS = 10;            // 同一 clientId 最多累计 10 个房间
 
@@ -39,9 +39,6 @@ exports.main = async (event, context) => {
   console.log('【createRoom】入参:', { nickname, avatarIndex, nicknameAuto, clientId });
 
   // 1. Validate
-  if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
-    return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
-  }
   if (!Number.isInteger(avatarIndex) || avatarIndex < 0 || avatarIndex > 6) {
     return { code: 'INVALID_INPUT', message: '头像序号 0-6', detail: 'avatarIndex' };
   }
@@ -49,6 +46,13 @@ exports.main = async (event, context) => {
   // 若用户手动设置过昵称，固定用传入的；否则随机分配
   const NAMES = ['东风', '南风', '西风', '北风', '红中', '白板', '发财'];
   const isManual = nicknameAuto === false;
+
+  // 手动模式才校验昵称（自动模式会用系统名覆盖）
+  if (isManual) {
+    if (typeof nickname !== 'string' || nickname.trim().length === 0 || nickname.length > 8) {
+      return { code: 'INVALID_INPUT', message: '昵称长度 1-8', detail: 'nickname' };
+    }
+  }
   console.log('【createRoom】isManual:', isManual, 'nicknameAuto:', nicknameAuto, 'nickname:', nickname);
   const assignedAvatar = isManual ? avatarIndex : Math.floor(Math.random() * 7);
   const assignedNickname = isManual ? nickname.trim() : NAMES[assignedAvatar];
