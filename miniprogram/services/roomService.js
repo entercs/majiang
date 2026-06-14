@@ -27,10 +27,6 @@ function getPlayers(roomId) {
   return db.collection('players').where({ roomId }).get().then(r => r.data);
 }
 
-function finishRoom({ roomId, clientId }) {
-  return callFunction('finishRoom', { roomId, clientId });
-}
-
 function leaveRoom({ roomId, playerId, clientId }) {
   return callFunction('leaveRoom', { roomId, playerId, clientId });
 }
@@ -39,4 +35,4 @@ function getMyRooms({ clientId }) {
   return callFunction('getMyRooms', { clientId });
 }
 
-module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, finishRoom, leaveRoom, getMyRooms };
+module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, leaveRoom, getMyRooms };

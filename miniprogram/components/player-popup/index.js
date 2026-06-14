@@ -68,8 +68,6 @@ Component({
       this.triggerEvent('editnick');
     },
 
-    noop() {},
-
     onConfirm() {
       const { selectedNicknameType, systemNickname, inputNickname, avatarIndex } = this.data;
       const nickname = selectedNicknameType === 'system' ? systemNickname : inputNickname;
