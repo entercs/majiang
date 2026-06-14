@@ -44,7 +44,7 @@ function _decorateMyRooms(data) {
 }
 
 function _ensureNickname() {
-  return appStore.nickname || '玩家';
+  return appStore.nickname || '';
 }
 
 Page({
@@ -147,15 +147,14 @@ Page({
   },
 
   onJoinRoom() {
-    const nickname = appStore.nickname || '玩家';
-    this.setData({ nickname });
+    this.setData({ nickname: appStore.nickname || '' });
     wx.showModal({
       title: '加入牌局',
       editable: true,
       placeholderText: '请输入 6 位房间号',
       success: (modal) => {
         if (modal.confirm && modal.content) {
-          this._doJoin(modal.content.trim(), nickname);
+          this._doJoin(modal.content.trim(), appStore.nickname || '');
         }
       },
     });
@@ -164,7 +163,7 @@ Page({
   // 点击"进行中"分区某条：重入房间（joinRoom 会找到旧 player）
   onTapActive(e) {
     const { roomid, roomcode } = e.currentTarget.dataset;
-    const nickname = appStore.nickname || '玩家';
+    const nickname = appStore.nickname || '';
     wx.showLoading({ title: '加入中...' });
     roomService.joinRoom({
       roomCode: roomcode,
@@ -193,7 +192,7 @@ Page({
     wx.showLoading({ title: '加入中...' });
     roomService.joinRoom({
       roomCode,
-      nickname,
+      nickname: appStore.nickname || '',
       avatarIndex: appStore.avatarIndex || 0,
       clientId: appStore.clientId,
       // 有自定义昵称 → 手动模式（需同步）；没有 → 自动模式
