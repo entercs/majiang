@@ -8,14 +8,13 @@ const { ROOM_STATUS } = require('./_shared/constants');
  * 玩家退出房间
  * 入参: { roomId, playerId, clientId }
  *
- * 流程（不用事务，因为事务内不允许 where().count() 类批量查询）：
+ * 流程：
  *  1) 校验 player
  *  2) 校验 room
  *  3) 标 player.isOnline = false
- *  4) 查该 room 内剩余 isOnline=true 的人数
- *  5) 若为 0 且 status='active' → 自动关
+ *  4) 返回剩余在线人数
  *
- * 并发安全：极端 race 由 autoCloseTimeout 定时器兜底
+ * 房间超时关闭由 autoCloseTimeout 定时器独立处理
  */
 exports.main = async (event) => {
   const { roomId, playerId, clientId } = event;

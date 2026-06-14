@@ -68,14 +68,6 @@ Component({
       this.triggerEvent('editnick');
     },
 
-    onLeaveRoom() {
-      this.triggerEvent('leaveroom');
-    },
-
-    onFinishRoom() {
-      this.triggerEvent('finishroom');
-    },
-
     noop() {},
 
     onConfirm() {

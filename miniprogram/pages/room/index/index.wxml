@@ -72,7 +72,7 @@
     bind:cancel="onPopupCancel"
   ></score-popup>
 
-  <!-- self 操作弹窗（头像选择 / 修改昵称 / 退出房间 / 结束本局） -->
+  <!-- self 操作弹窗（头像选择 / 修改昵称） -->
   <player-popup
     wx:if="{{selfPopupVisible}}"
     player-id="{{selfPopupTarget._id}}"
@@ -83,7 +83,5 @@
     bind:avatarchange="onSelfAvatarChange"
     bind:confirm="onSelfPopupConfirm"
     bind:editnick="onSelfEditNick"
-    bind:leaveroom="onSelfPopupLeaveRoom"
-    bind:finishroom="onSelfPopupFinishRoom"
   ></player-popup>
 </view>

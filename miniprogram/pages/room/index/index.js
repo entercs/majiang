@@ -317,29 +317,6 @@ Page({
     this.setData({ baseScorePopupVisible: false });
   },
 
-  onFinishRoom() {
-    wx.showModal({
-      title: '结束本局',
-      content: '结束后所有人都无法再记录分数，且无法重新开启。确定要结束吗？',
-      confirmText: '结束本局',
-      confirmColor: '#d33',
-      success: (res) => {
-        if (res.confirm) {
-          roomService.finishRoom({
-            roomId: roomStore.roomId,
-            clientId: appStore.clientId,
-          }).then((r) => {
-            if (r.code === 'OK') {
-              wx.redirectTo({ url: '/pages/room/summary/index' });
-            } else {
-              handleError({ code: r.code, message: r.message }, this);
-            }
-          }).catch(err => handleError(err, this));
-        }
-      },
-    });
-  },
-
   // ====== self 弹窗回调 ======
 
   onSelfPopupClose() {
@@ -422,13 +399,4 @@ Page({
     });
   },
 
-  onSelfPopupLeaveRoom() {
-    this.setData({ selfPopupVisible: false });
-    this.onLeaveRoom();
-  },
-
-  onSelfPopupFinishRoom() {
-    this.setData({ selfPopupVisible: false });
-    this.onFinishRoom();
-  },
 });
