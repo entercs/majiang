@@ -2,6 +2,7 @@ const roomStore = require('../../../stores/roomStore');
 const roundService = require('../../../services/roundService');
 const { handleError } = require('../../../services/errorHandler');
 const { generateTempId } = require('../../../utils/cloud-id');
+const huangmei = require('../../../rules/huangmei');
 
 // ============== 玩法常量 ==============
 
@@ -153,6 +154,11 @@ Page({
 
     genCount: 0,                   // 根的数量（龙七对默认1）
     genCountLocked: false,        // 龙七对时锁住根数量
+
+    // ---------- 玩法配置 ----------
+    showConfigPanel: false,
+    configCardTypes: [],         // [{key, label, fan, desc}, ...]
+    configWinTypes: [],          // [{key, label, fan, desc}, ...]
   },
 
   onLoad() {
@@ -169,7 +175,16 @@ Page({
       .filter(p => p._id !== roomStore.currentPlayerId)
       .sort((a, b) => a.seatIndex - b.seatIndex);
     const baseScore = roomStore.rule?.baseScore ?? 1;
-    this.setData({ otherPlayers, baseScore, baseScoreEditable: baseScore, ruleTypes: RULE_TYPES, ruleTypeIndex: 0, genCountMax: 3, specialWinTypeDisabled: false });
+    this.setData({
+      otherPlayers,
+      baseScore,
+      baseScoreEditable: baseScore,
+      ruleTypes: RULE_TYPES,
+      ruleTypeIndex: 0,
+      genCountMax: 3,
+      specialWinTypeDisabled: false,
+      isOwner: roomStore.isOwner,
+    });
     this._recompute();
   },
 
@@ -585,15 +600,18 @@ Page({
 
   _recomputeHm() {
     const breakdown = [];
+    const rule = roomStore.rule;
 
     for (const key of (this.data.hmCardTypeKeys || [])) {
+      const fan = huangmei.getCardTypeFan(key, rule);
       const c = _find(HM_CARD_TYPES, key);
-      if (c && c.fan > 0) breakdown.push({ name: c.label, fan: c.fan, score: c.fan * this.data.baseScoreEditable });
+      if (fan > 0) breakdown.push({ name: c.label, fan, score: fan * this.data.baseScoreEditable });
     }
 
     if (this.data.winType) {
+      const fan = huangmei.getWinTypeFan(this.data.winType, rule);
       const win = _find(HM_WIN_TYPES, this.data.winType);
-      if (win && win.fan > 0) breakdown.push({ name: win.label, fan: win.fan, score: win.fan * this.data.baseScoreEditable });
+      if (fan > 0) breakdown.push({ name: win.label, fan, score: fan * this.data.baseScoreEditable });
     }
 
     if (this.data.facai != null) {
@@ -646,5 +664,177 @@ Page({
     } else {
       this._recomputeHm();
     }
+  },
+
+  // ============== 玩法配置面板 ==============
+
+  openConfigPanel() {
+    const rule = roomStore.rule || {};
+    const cardTypeFans = rule.cardTypeFans || {};
+    const winTypeFans = rule.winTypeFans || {};
+    const isOwner = roomStore.isOwner;
+
+    // 初始化牌型配置（带说明文字）
+    const cardTypeDescs = {
+      pinghu: '最基本的胡牌方式',
+      qiyidui: '手牌凑齐7个对子',
+      pengpenghu: '全部为刻子（碰牌）的胡牌',
+      qingyise: '全部为同一花色的胡牌',
+      hunyise: '同一花色+风牌/箭牌的胡牌',
+      quanqiuren: '吃碰杠后只剩单张，且全部吃碰别人的牌',
+    };
+    const configCardTypes = HM_CARD_TYPES.map(c => ({
+      key: c.key,
+      label: c.label,
+      fan: cardTypeFans[c.key] ?? c.fan,
+      desc: cardTypeDescs[c.key] || '',
+      readonly: !isOwner,
+    }));
+
+    const winTypeDescs = {
+      dianpao: '点炮者单独付分给胡牌者',
+      zimo: '自摸胡牌，3家各付分',
+      caishang: '杠牌补花后自摸',
+      gangshang: '杠后补牌自摸',
+      qianggang: '他人杠牌时抢胡',
+      haidilao: '最后一张牌自摸',
+    };
+    const configWinTypes = HM_WIN_TYPES.map(w => ({
+      key: w.key,
+      label: w.label,
+      fan: winTypeFans[w.key] ?? w.fan,
+      desc: winTypeDescs[w.key] || '',
+      readonly: !isOwner,
+    }));
+
+    this.setData({ showConfigPanel: true, configCardTypes, configWinTypes, isOwner, bodyNoScroll: true });
+  },
+
+  closeConfigPanel() {
+    this.setData({ showConfigPanel: false, bodyNoScroll: false });
+  },
+
+  // 阻止冒泡的空方法（用于 config-dialog 的 catchtap）
+  noop() {},
+
+  _updateCardTypeFan(key, delta) {
+    if (!roomStore.isOwner) return;
+    const list = this.data.configCardTypes.map(c => {
+      if (c.key !== key) return c;
+      const newFan = Math.max(0, Math.min(100, c.fan + delta));
+      return { ...c, fan: newFan };
+    });
+    this.setData({ configCardTypes: list });
+  },
+
+  _updateWinTypeFan(key, delta) {
+    if (!roomStore.isOwner) return;
+    const list = this.data.configWinTypes.map(w => {
+      if (w.key !== key) return w;
+      const newFan = Math.max(0, Math.min(100, w.fan + delta));
+      return { ...w, fan: newFan };
+    });
+    this.setData({ configWinTypes: list });
+  },
+
+  onCardTypeFanMinus(e) {
+    const key = e.currentTarget.dataset.key;
+    this._updateCardTypeFan(key, -1);
+  },
+
+  onCardTypeFanPlus(e) {
+    const key = e.currentTarget.dataset.key;
+    this._updateCardTypeFan(key, 1);
+  },
+
+  onWinTypeFanMinus(e) {
+    const key = e.currentTarget.dataset.key;
+    this._updateWinTypeFan(key, -1);
+  },
+
+  onWinTypeFanPlus(e) {
+    const key = e.currentTarget.dataset.key;
+    this._updateWinTypeFan(key, 1);
+  },
+
+  onResetConfig() {
+    if (!roomStore.isOwner) return;
+    const cardTypeDescs = {
+      pinghu: '最基本的胡牌方式',
+      qiyidui: '手牌凑齐7个对子',
+      pengpenghu: '全部为刻子（碰牌）的胡牌',
+      qingyise: '全部为同一花色的胡牌',
+      hunyise: '同一花色+风牌/箭牌的胡牌',
+      quanqiuren: '吃碰杠后只剩单张，且全部吃碰别人的牌',
+    };
+    const winTypeDescs = {
+      dianpao: '点炮者单独付分给胡牌者',
+      zimo: '自摸胡牌，3家各付分',
+      caishang: '杠牌补花后自摸',
+      gangshang: '杠后补牌自摸',
+      qianggang: '他人杠牌时抢胡',
+      haidilao: '最后一张牌自摸',
+    };
+    const configCardTypes = HM_CARD_TYPES.map(c => ({
+      key: c.key, label: c.label, fan: c.fan,
+      desc: cardTypeDescs[c.key] || '', readonly: false,
+    }));
+    const configWinTypes = HM_WIN_TYPES.map(w => ({
+      key: w.key, label: w.label, fan: w.fan,
+      desc: winTypeDescs[w.key] || '', readonly: false,
+    }));
+    this.setData({ configCardTypes, configWinTypes });
+  },
+
+  onApplyConfig() {
+    if (!roomStore.isOwner) {
+      wx.showToast({ title: '仅房主可修改', icon: 'none' });
+      return;
+    }
+
+    // 收集当前面板值
+    const cardTypeFans = {};
+    this.data.configCardTypes.forEach(c => { cardTypeFans[c.key] = c.fan; });
+    const winTypeFans = {};
+    this.data.configWinTypes.forEach(w => { winTypeFans[w.key] = w.fan; });
+
+    // 检查是否等于默认值（全等于默认值时视为"重置"，删除字段而非写入空值）
+    const allWinTypeDefault = this.data.configWinTypes.every(w => {
+      const defaultEntry = HM_WIN_TYPES.find(h => h.key === w.key);
+      return defaultEntry && w.fan === defaultEntry.fan;
+    });
+    const allCardTypeDefault = this.data.configCardTypes.every(c => {
+      const defaultEntry = HM_CARD_TYPES.find(h => h.key === c.key);
+      return defaultEntry && c.fan === defaultEntry.fan;
+    });
+
+    // 复制时排除系统字段（_id、roomId 等不允许被云端覆盖）
+    const { _id, roomId, createdAt, updatedAt, ...restRule } = roomStore.rule || {};
+    const updatedRule = { ...restRule };
+
+    // 若全等于默认值，则删除字段（恢复出厂）；否则写入自定义值
+    if (allCardTypeDefault && allWinTypeDefault) {
+      delete updatedRule.cardTypeFans;
+      delete updatedRule.winTypeFans;
+    } else {
+      updatedRule.cardTypeFans = cardTypeFans;
+      updatedRule.winTypeFans = winTypeFans;
+    }
+
+    wx.showLoading({ title: '保存中...' });
+    const roomService = require('../../../services/roomService');
+    roomService.updateRule({ roomId: roomStore.roomId, rule: updatedRule })
+      .then((res) => {
+        wx.hideLoading();
+        if (res.code === 'OK') {
+          roomStore.setRule(updatedRule);
+          wx.showToast({ title: '已保存' });
+          this.setData({ showConfigPanel: false });
+          this._recompute();
+        } else {
+          handleError({ code: res.code, message: res.message }, this);
+        }
+      })
+      .catch(err => { wx.hideLoading(); handleError(err, this); });
   },
 });

@@ -24,6 +24,21 @@ function validateRule(rule) {
     if (typeof rule[f] !== 'number' || rule[f] < 0) return false;
   }
   if (typeof rule.allowDianpao !== 'boolean') return false;
+
+  // 可选字段：cardTypeFans / winTypeFans（存在时校验结构）
+  if (rule.cardTypeFans != null) {
+    if (typeof rule.cardTypeFans !== 'object') return false;
+    for (const v of Object.values(rule.cardTypeFans)) {
+      if (typeof v !== 'number' || v < 0 || v > 100) return false;
+    }
+  }
+  if (rule.winTypeFans != null) {
+    if (typeof rule.winTypeFans !== 'object') return false;
+    for (const v of Object.values(rule.winTypeFans)) {
+      if (typeof v !== 'number' || v < 0 || v > 100) return false;
+    }
+  }
+
   return true;
 }
 

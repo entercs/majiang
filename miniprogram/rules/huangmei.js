@@ -114,6 +114,36 @@ module.exports = {
     ],
   },
 
+  // --- 可配置炮数查表函数 ---
+
+  /**
+   * 获取牌型的炮数
+   * @param {string} key - 牌型 key
+   * @param {Object} rule - 房间规则对象（可选）
+   * @returns {number} 炮数
+   */
+  getCardTypeFan(key, rule) {
+    if (rule && rule.cardTypeFans && rule.cardTypeFans[key] != null) {
+      return rule.cardTypeFans[key];
+    }
+    const found = CARD_TYPES.find(c => c.key === key);
+    return found ? found.fan : 0;
+  },
+
+  /**
+   * 获取胡牌方式的炮数
+   * @param {string} key - 胡牌方式 key
+   * @param {Object} rule - 房间规则对象（可选）
+   * @returns {number} 炮数
+   */
+  getWinTypeFan(key, rule) {
+    if (rule && rule.winTypeFans && rule.winTypeFans[key] != null) {
+      return rule.winTypeFans[key];
+    }
+    const found = WIN_TYPES.find(w => w.key === key);
+    return found ? found.fan : 0;
+  },
+
   /** 辅助：在数组中按 key 查找选项 */
   find(arr, key) {
     return arr.find(o => o.key === key);

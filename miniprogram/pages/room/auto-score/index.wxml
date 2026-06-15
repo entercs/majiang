@@ -1,5 +1,5 @@
-<view class="auto-score">
-  <!-- 顶栏：玩法切换 + 底分 -->
+<view class="auto-score {{bodyNoScroll ? 'body-no-scroll' : ''}}">
+  <!-- 顶栏：玩法切换 + 底分 + 玩法配置按钮 -->
   <view class="topbar">
     <view class="topbar-item">
       <text class="topbar-label">玩法</text>
@@ -19,6 +19,12 @@
         <view class="stepper-btn {{baseScoreEditable >= baseScoreMax ? 'disabled' : ''}}" bindtap="onBaseScoreChange" data-value="{{baseScoreEditable + 1}}">+</view>
       </view>
     </view>
+  </view>
+
+  <!-- 提示语 + 玩法配置入口 -->
+  <view class="config-hint" wx:if="{{ruleType === 'huangmei'}}">
+    <text class="config-hint-text">💡 如需调整炮数，请先点击「玩法配置」</text>
+    <view class="btn-config" bindtap="openConfigPanel">玩法配置</view>
   </view>
 
   <!-- 付给 -->
@@ -236,6 +242,52 @@
       <view class="confirm-btns">
         <view class="btn default" bindtap="onCancel">取消</view>
         <view class="btn primary" bindtap="onConfirm">确认</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 玩法配置弹窗 -->
+  <view class="config-overlay" wx:if="{{showConfigPanel}}" bindtap="closeConfigPanel" catchtouchmove="noop">
+    <view class="config-dialog" catchtap="noop" catchtouchmove="noop">
+      <view class="config-title">
+        <text>玩法配置</text>
+        <view class="config-close-btn" bindtap="closeConfigPanel">×</view>
+      </view>
+
+      <!-- 牌型炮数 -->
+      <view class="config-section">
+        <view class="config-section-title">牌型</view>
+        <view class="config-row" wx:for="{{configCardTypes}}" wx:key="key">
+          <text class="config-label">{{item.label}}</text>
+          <view class="config-desc">{{item.desc}}</view>
+          <view class="fan-stepper">
+            <view class="fan-stepper-btn {{item.readonly ? 'disabled' : ''}}" bindtap="onCardTypeFanMinus" data-key="{{item.key}}">−</view>
+            <text class="fan-stepper-num">{{item.fan}}</text>
+            <view class="fan-stepper-btn {{item.readonly ? 'disabled' : ''}}" bindtap="onCardTypeFanPlus" data-key="{{item.key}}">+</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 胡牌方式炮数 -->
+      <view class="config-section">
+        <view class="config-section-title">胡牌方式</view>
+        <view class="config-row" wx:for="{{configWinTypes}}" wx:key="key">
+          <text class="config-label">{{item.label}}</text>
+          <view class="config-desc">{{item.desc}}</view>
+          <view class="fan-stepper">
+            <view class="fan-stepper-btn {{item.readonly ? 'disabled' : ''}}" bindtap="onWinTypeFanMinus" data-key="{{item.key}}">−</view>
+            <text class="fan-stepper-num">{{item.fan}}</text>
+            <view class="fan-stepper-btn {{item.readonly ? 'disabled' : ''}}" bindtap="onWinTypeFanPlus" data-key="{{item.key}}">+</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="config-btns">
+        <view wx:if="{{isOwner}}" class="btn reset-btn" bindtap="onResetConfig">重置</view>
+        <view class="btn default" bindtap="closeConfigPanel">取消</view>
+        <view class="btn primary {{isOwner ? '' : 'disabled'}}" bindtap="onApplyConfig">
+          {{isOwner ? '应用' : '仅房主可修改'}}
+        </view>
       </view>
     </view>
   </view>

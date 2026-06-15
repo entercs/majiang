@@ -5,6 +5,10 @@
   background: #F7F5F0;
   box-sizing: border-box;
 }
+.auto-score.body-no-scroll {
+  overflow: hidden;
+  height: 100vh;
+}
 
 /* 顶栏 */
 .topbar {
@@ -577,4 +581,162 @@
   font-size: 24rpx;
   color: #D32F2F;
   padding: 4rpx 0 0;
+}
+
+/* 玩法配置提示语 */
+.config-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #E8F5ED;
+  border-radius: 16rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 24rpx;
+}
+.config-hint-text {
+  font-size: 26rpx;
+  color: #0F7A38;
+  flex: 1;
+}
+.btn-config {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 10rpx 20rpx;
+  background: #0F7A38;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* 玩法配置弹窗 */
+.config-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 999;
+}
+.config-dialog {
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 40rpx 32rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  box-shadow: 0 -16rpx 64rpx rgba(0, 0, 0, 0.12);
+}
+.config-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 32rpx;
+  position: relative;
+}
+.config-close-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  color: #999999;
+  font-weight: 400;
+}
+.config-section {
+  margin-bottom: 24rpx;
+}
+.config-section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 16rpx;
+  padding-bottom: 8rpx;
+  border-bottom: 2rpx solid #EEEEEE;
+}
+.config-row {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 0;
+  border-bottom: 1rpx dashed #EEEEEE;
+}
+.config-row:last-child {
+  border-bottom: none;
+}
+.config-label {
+  flex-shrink: 0;
+  width: 120rpx;
+  font-size: 28rpx;
+  color: #1A1A1A;
+  font-weight: 500;
+}
+.config-desc {
+  flex: 1;
+  font-size: 22rpx;
+  color: #999999;
+  padding-right: 12rpx;
+}
+.fan-stepper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: #F7F5F0;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.fan-stepper-btn {
+  width: 64rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #0F7A38;
+  font-weight: 600;
+}
+.fan-stepper-btn:active {
+  background: #E8F5ED;
+}
+.fan-stepper-num {
+  min-width: 64rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1A1A1A;
+  padding: 0 8rpx;
+}
+.config-btns {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+.config-btns .btn {
+  flex: 1;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+.config-btns .btn.reset-btn {
+  background: #F5F5F5;
+  color: #D32F2F;
+  border: 2rpx solid #D32F2F;
+  flex: 0.8;
 }

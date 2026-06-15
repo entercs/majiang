@@ -62,17 +62,17 @@ Page({
       const db = wx.cloud.database();
       return db.collection('rules').doc(room.ruleId).get().then((ruleRes) => {
         const rule = ruleRes.data;
-        const myId = players.find(p =>
+        const myPlayer = players.find(p =>
           (p.openid && p.openid === appStore.openid) ||
           (p.clientId && p.clientId === appStore.clientId)
-        )?._id || players[0]?._id; // fallback: 暂时用第一个玩家
+        ) || players[0]; // fallback: 暂时用第一个玩家
         roomStore.setRoom({
           roomId,
           roomCode: room.roomCode,
           rule,
           players,
-          isOwner: room.ownerId === appStore.openid,
-          currentPlayerId: myId,
+          isOwner: !!myPlayer?.isOwner,
+          currentPlayerId: myPlayer?._id,
           status: room.status,
         });
         this._startSync();
