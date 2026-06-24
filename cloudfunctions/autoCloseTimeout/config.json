@@ -1,6 +1,9 @@
 {
   "permissions": {
-    "openapi": []
+    "openapi": [
+      "wxacode.get",
+      "wxacode.getUnlimited"
+    ]
   },
   "triggers": [
     {

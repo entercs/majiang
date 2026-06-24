@@ -35,4 +35,8 @@ function getMyRooms({ clientId }) {
   return callFunction('getMyRooms', { clientId });
 }
 
-module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, leaveRoom, getMyRooms };
+function getRoomQRCode({ roomCode }) {
+  return callFunction('getRoomQRCode', { roomCode });
+}
+
+module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, leaveRoom, getMyRooms, getRoomQRCode };

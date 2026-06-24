@@ -2,7 +2,7 @@
   <view class="code-bar">
     <text class="code-label">房间号</text>
     <text class="code-value" bind:tap="onCopyCode">{{roomCode}}</text>
-    <text class="share-btn" bind:tap="onShareRoom">分享</text>
+    <text class="share-btn" bind:tap="onOpenSharePopup">分享</text>
     <text class="leave-btn" bind:tap="onLeaveRoom">退出</text>
   </view>
 
@@ -84,4 +84,26 @@
     bind:confirm="onSelfPopupConfirm"
     bind:editnick="onSelfEditNick"
   ></player-popup>
+
+  <!-- 分享二维码弹窗 -->
+  <view class="share-popup-mask" wx:if="{{sharePopupVisible}}" catch:tap="onCloseSharePopup">
+    <view class="share-popup" catch:tap="noop">
+      <view class="share-popup-title">邀请好友加入</view>
+      <view class="share-popup-qrcode">
+        <image wx:if="{{shareQrCodeFileID}}"
+               class="qrcode-img"
+               src="{{shareQrCodeFileID}}"
+               mode="aspectFit"
+               binderror="onQrCodeImageError"></image>
+        <view wx:elif="{{shareQrCodeLoading}}" class="qrcode-status">正在生成二维码...</view>
+        <view wx:else class="qrcode-failed">
+          <view class="qrcode-status">二维码生成失败</view>
+          <view class="qrcode-retry-btn" bind:tap="onRetryQRCode">重试</view>
+        </view>
+      </view>
+      <view class="share-popup-room-code">房间号 {{roomCode}}</view>
+      <view class="share-popup-hint">朋友扫一扫即可加入</view>
+      <view class="share-popup-close-btn" bind:tap="onCloseSharePopup">关闭</view>
+    </view>
+  </view>
 </view>

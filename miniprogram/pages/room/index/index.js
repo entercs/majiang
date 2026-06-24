@@ -21,6 +21,9 @@ Page({
     popupTarget: null,
     selfPopupVisible: false,
     selfPopupTarget: null,
+    sharePopupVisible: false,
+    shareQrCodeFileID: '',
+    shareQrCodeLoading: false,
   },
 
   onLoad(query) {
@@ -44,6 +47,14 @@ Page({
     if (this._renderTimer) { clearInterval(this._renderTimer); this._renderTimer = null; }
     const syncWatcher = require('../../../stores/syncWatcher');
     syncWatcher.stop();
+  },
+
+  onShareAppMessage() {
+    const roomCode = roomStore.roomCode || '';
+    return {
+      title: roomCode ? `${roomCode} · 来一起打麻将` : '胡了么 · 打麻将记分神器',
+      path: roomCode ? `/pages/home/index?joinCode=${roomCode}` : '/pages/home/index',
+    };
   },
 
   _init(roomId) {
@@ -75,6 +86,8 @@ Page({
           currentPlayerId: myPlayer?._id,
           status: room.status,
         });
+        // 捕获 QR code fileID（createRoom 时已写入；老房间可能为空）
+        this.setData({ shareQrCodeFileID: room.qrCodeFileID || '' });
         this._startSync();
         this._render();
       });
@@ -147,13 +160,51 @@ Page({
     wx.setClipboardData({ data: this.data.roomCode });
   },
 
-  onShareRoom() {
-    wx.showModal({
-      title: '分享房间',
-      content: `房间号：${this.data.roomCode}\n请朋友打开「胡了么」小程序，在首页输入房间号加入。`,
-      showCancel: false,
-    });
+  // === 分享二维码弹窗 ===
+  onOpenSharePopup() {
+    this.setData({ sharePopupVisible: true });
+    if (this.data.shareQrCodeFileID) return;  // 秒开路径：fileID 已知
+    this._loadQRCode();  // fallback：老房间懒生成
   },
+
+  _loadQRCode() {
+    const roomCode = roomStore.roomCode;
+    if (!roomCode) return;
+    this.setData({ shareQrCodeLoading: true });
+    roomService.getRoomQRCode({ roomCode })
+      .then((res) => {
+        if (res.code === 'OK' && res.data && res.data.fileID) {
+          this.setData({
+            shareQrCodeFileID: res.data.fileID,
+            shareQrCodeLoading: false,
+          });
+        } else {
+          this.setData({ shareQrCodeLoading: false });
+        }
+      })
+      .catch((err) => {
+        console.error('getRoomQRCode error:', err);
+        this.setData({ shareQrCodeLoading: false });
+        handleError(err, this);
+      });
+  },
+
+  onRetryQRCode() {
+    this.setData({ shareQrCodeLoading: true });
+    this._loadQRCode();
+  },
+
+  onCloseSharePopup() {
+    this.setData({ sharePopupVisible: false });
+  },
+
+  onQrCodeImageError() {
+    console.warn('QR code image failed to load, fallback to retry');
+    this.setData({ shareQrCodeFileID: '', shareQrCodeLoading: false });
+    this._loadQRCode();
+  },
+
+  noop() {},
 
   // 点玩家头像/昵称（玩家行 + 排行榜都走这里）：自己→self 弹窗；别人→加分弹窗
   onTapPlayer(e) {

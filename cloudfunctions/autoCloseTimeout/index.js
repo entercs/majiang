@@ -3,6 +3,7 @@ cloud.init({ env: 'majing-d6gx0f5mm301172e1' });
 const db = cloud.database();
 const _ = db.command;
 const { ROOM_STATUS } = require('./_shared/constants');
+const { cleanupRoomQRCode } = require('./_shared/qrCodeService');
 
 // 30 分钟无活动 → 自动关闭
 const INACTIVE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -25,13 +26,19 @@ exports.main = async () => {
     // 所以 emptyAt 存在等价于房间无人
     if (room.emptyAt != null) {
       if (room.emptyAt + EMPTY_TIMEOUT_MS <= now) {
+        const qrCodeFileID = room.qrCodeFileID;
         await db.collection('rooms').doc(room._id).update({
           data: {
             status: ROOM_STATUS.FINISHED,
             closedAt: now,
             closedBy: 'auto-empty',
+            qrCodeFileID: _.remove(),
           },
         });
+        // 异步清理云存储文件（best-effort，失败不影响关房）
+        cleanupRoomQRCode(qrCodeFileID).catch(err =>
+          console.error('QR cleanup background error:', err.message)
+        );
         closed++;
       }
       continue;
@@ -53,13 +60,19 @@ exports.main = async () => {
       : lastActivityAt;
 
     if (finalActivity < inactiveCutoff) {
+      const qrCodeFileID = room.qrCodeFileID;
       await db.collection('rooms').doc(room._id).update({
         data: {
           status: ROOM_STATUS.FINISHED,
           closedAt: now,
           closedBy: 'auto-timeout',
+          qrCodeFileID: _.remove(),
         },
       });
+      // 异步清理云存储文件（best-effort，失败不影响关房）
+      cleanupRoomQRCode(qrCodeFileID).catch(err =>
+        console.error('QR cleanup background error:', err.message)
+      );
       closed++;
     }
   }

@@ -285,3 +285,88 @@
   text-align: center;
   font-size: 24rpx;
 }
+
+/* === 分享二维码弹窗 === */
+.share-popup-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.share-popup {
+  width: 560rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 48rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.share-popup-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #0F7A38;
+  margin-bottom: 32rpx;
+}
+.share-popup-qrcode {
+  width: 400rpx;
+  height: 400rpx;
+  background: #F5F5F5;
+  border-radius: 12rpx;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qrcode-img {
+  width: 400rpx;
+  height: 400rpx;
+}
+.qrcode-status {
+  font-size: 26rpx;
+  color: #999;
+  text-align: center;
+}
+.qrcode-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.qrcode-retry-btn {
+  margin-top: 20rpx;
+  padding: 12rpx 36rpx;
+  background: #0F7A38;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+}
+.share-popup-room-code {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+  margin-top: 32rpx;
+}
+.share-popup-hint {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+  margin-bottom: 32rpx;
+}
+.share-popup-close-btn {
+  width: 100%;
+  height: 80rpx;
+  border-radius: 16rpx;
+  background: #F5F5F5;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+}

@@ -6,6 +6,7 @@ const _ = db.command;
 const { generateUniqueRoomCode } = require('./_shared/cloud-id');
 const { getDefaultRule } = require('./_shared/ruleService');
 const { ROOM_STATUS } = require('./_shared/constants');
+const { generateRoomQRCode } = require('./_shared/qrCodeService');
 
 const RATE_LIMIT_MS = 10 * 1000;        // 同一 clientId 10s 内只能创建 1 次
 const MAX_ACTIVE_ROOMS = 3;             // 同一 clientId 最多 3 个 active 房间
@@ -161,9 +162,13 @@ exports.main = async (event, context) => {
       data: { playerIds: [playerRes._id] }
     });
 
+    // 8. 生成房间小程序码（弱一致：失败不影响 createRoom 成功）
+    const qrCodeFileID = await generateRoomQRCode(roomId, roomCode);
+    // qrCodeFileID 可能为 null（生成失败）—— 此时 rooms.qrCodeFileID 保持 undefined
+
     return {
       code: 'OK',
-      data: { roomId, roomCode, playerId: playerRes._id, ruleId }
+      data: { roomId, roomCode, playerId: playerRes._id, ruleId, qrCodeFileID }
     };
   } catch (err) {
     console.error('createRoom error:', err);
