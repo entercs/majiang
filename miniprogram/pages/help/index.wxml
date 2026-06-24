@@ -1,0 +1,28 @@
+<view class="help">
+  <view class="section">
+    <view class="section-title">核心玩法</view>
+    <view class="bullet">点别的玩家头像 → 输入扣分（自己 -X，对方 +X）</view>
+    <view class="bullet">点自己的头像 → 修改昵称 / 退出房间</view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">邀请朋友</view>
+    <view class="bullet">房间页点右上角「分享」→ 朋友微信扫码即可加入</view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">查看战绩</view>
+    <view class="bullet">首页下方「已结束」区查看历史牌局</view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">数据与隐私</view>
+    <view class="bullet">仅记录番数变化，不涉及金钱交易</view>
+    <view class="bullet">数据存于微信云开发，仅用于牌局记录</view>
+    <view class="bullet">本应用仅供娱乐和记录</view>
+  </view>
+
+  <view class="footer-text">
+    胡了么 · 让麻将记分更轻松
+  </view>
+</view>

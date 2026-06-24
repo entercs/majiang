@@ -1,0 +1,49 @@
+.help {
+  min-height: 100vh;
+  background: #F7F5F0;
+  padding: 24rpx 24rpx 80rpx;
+  box-sizing: border-box;
+}
+
+.section {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #0F7A38;
+  margin-bottom: 24rpx;
+  padding-left: 16rpx;
+  border-left: 6rpx solid #0F7A38;
+  line-height: 1.2;
+}
+
+.bullet {
+  font-size: 28rpx;
+  color: #1A1A1A;
+  line-height: 1.7;
+  padding: 8rpx 0 8rpx 16rpx;
+  position: relative;
+}
+
+.bullet::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  top: 8rpx;
+  color: #0F7A38;
+  font-size: 28rpx;
+  line-height: 1.7;
+}
+
+.footer-text {
+  text-align: center;
+  color: #999;
+  font-size: 24rpx;
+  margin-top: 40rpx;
+}

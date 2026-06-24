@@ -50,16 +50,43 @@ function _ensureNickname() {
 Page({
   data: { loaded: true, myRooms: { active: [], finished: [] }, nickname: '', baseScorePopupVisible: false, pendingNickname: '' },
 
-  onShow() {
-    this._renderMyRooms();
-  },
-
-  onLoad() {
+  onLoad(options) {
     appStore.init();
     this.setData({
       nickname: appStore.nickname,
       avatarIndex: appStore.avatarIndex,
     });
+    // 消费扫码带过来的 roomCode：
+    // - 分享卡片带 joinCode 时：options.joinCode（onLoad 拿得到）
+    // - 小程序码带 scene 时：app.onLaunch 已存到 globalData.pendingJoinCode（onLoad 拿不到 scene）
+    this._consumePendingJoinCode(options);
+  },
+
+  onShow() {
+    // 小程序从后台被扫码唤醒时，app.onShow 也会更新 pendingJoinCode，这里补消费
+    this._consumePendingJoinCode();
+    this._renderMyRooms();
+  },
+
+  _consumePendingJoinCode(options) {
+    // 1. 分享卡片路径（onLoad 拿得到 joinCode）
+    const fromOptions = options && (options.joinCode || options.scene);
+    // 2. 扫码带 scene（onLoad 拿不到，由 app.js 暂存到 globalData）
+    const fromGlobal = getApp().globalData.pendingJoinCode;
+    const raw = fromOptions || fromGlobal || '';
+    // 必须是 6 位数字才算合法房间号（防止 sourceAppId 之类的值误触）
+    const joinCode = /^\d{6}$/.test(String(raw)) ? String(raw) : '';
+    if (!joinCode) return;
+    // 消费后立刻清空，避免 onShow 重复触发
+    getApp().globalData.pendingJoinCode = '';
+    this._scanJoin(joinCode);
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '胡了么 · 打麻将记分神器',
+      path: '/pages/home/index',
+    };
   },
 
   onEditNickname() {
@@ -210,13 +237,44 @@ Page({
     });
   },
 
-  
-  onShowHelp() {
+  // 扫码加入：失败时弹明确的 modal（区别于手输房间号的通用 toast）
+  _scanJoin(roomCode) {
+    wx.showLoading({ title: '加入中...' });
+    roomService.joinRoom({
+      roomCode,
+      nickname: appStore.nickname || '',
+      avatarIndex: appStore.avatarIndex || 0,
+      clientId: appStore.clientId,
+      nicknameAuto: !appStore.nickname,
+    }).then((res) => {
+      wx.hideLoading();
+      if (res.code === 'OK') {
+        wx.reLaunch({ url: `/pages/room/index/index?roomId=${res.data.roomId}` });
+      } else {
+        this._showScanJoinError(res.code);
+      }
+    }).catch((err) => {
+      wx.hideLoading();
+      this._showScanJoinError(err.code);
+    });
+  },
+
+  _showScanJoinError(code) {
+    const messages = {
+      ROOM_FINISHED: '本局已结束，请找朋友重新邀请',
+      ROOM_FULL: '房间已满 4 人',
+      ROOM_NOT_FOUND: '房间号无效，请找朋友重新邀请',
+    };
     wx.showModal({
-      title: '使用帮助',
-      content: '【核心用法】\n1. 点创建牌局或加入牌局（输入 6 位房间号）\n2. 房间内点别的玩家头像 → 输入扣分（自己 -X，对方 +X）\n3. 排行榜实时刷新\n4. 点自己头像修改昵称（房间内会同步给其他玩家）\n5. 点自己头像弹窗里可「退出房间」或「结束本局」\n\n【辅助算分】\n- 点「辅助算分」按麻将规则（自摸/点炮/番数/杠）自动算分\n- 结果预览后点「应用到房间」才入账\n\n【房间生命周期】\n- 所有人退出房间 → 自动结束\n- 任何人都可手动点「结束本局」\n- 已结束的房间在首页「已结束」区可查看战绩\n\n【数据与隐私】\n- 仅记录番数变化，不涉及任何金钱交易\n- 数据存于微信云开发，仅用于牌局记录\n- 本应用仅供娱乐和记录\n\n【协议】\n- 用户协议、隐私协议见首页「帮助」',
+      title: '无法加入',
+      content: messages[code] || '加入失败，请稍后重试',
       showCancel: false,
       confirmText: '我知道了',
     });
+  },
+
+  
+  onShowHelp() {
+    wx.navigateTo({ url: '/pages/help/index' });
   },
 });

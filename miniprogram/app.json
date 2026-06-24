@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/help/index",
     "pages/room/index/index",
+    "pages/room/rule-config/index",
     "pages/room/auto-score/index",
     "pages/room/summary/index",
     "pages/room/history/index"
