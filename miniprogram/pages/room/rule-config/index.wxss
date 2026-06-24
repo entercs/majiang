@@ -1,67 +1,145 @@
 .rule-config {
-  padding-bottom: 200rpx;
-  background: #F7F5F0;
   min-height: 100vh;
+  background: #F7F5F0;
+  padding: 24rpx 24rpx 200rpx;
+  box-sizing: border-box;
 }
-.group {
+
+.section {
   background: #fff;
-  margin: 24rpx;
   border-radius: 24rpx;
-  overflow: hidden;
+  padding: 32rpx 28rpx;
+  margin-bottom: 24rpx;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
 }
-.group-title {
-  font-size: 26rpx;
-  color: #999999;
-  padding: 16rpx 24rpx;
-  background: #F7F5F0;
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #0F7A38;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid #EEEEEE;
+  margin-bottom: 16rpx;
 }
-.field-row {
+
+.setting {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx;
-  border-bottom: 2rpx solid #EEEEEE;
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid #F5F5F5;
 }
-.field-row:last-child {
+
+.setting:last-child {
   border-bottom: none;
 }
-.field-label {
+
+.setting-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 24rpx;
+}
+
+.setting-label {
   font-size: 30rpx;
   color: #1A1A1A;
+  font-weight: 500;
 }
-.field-input {
-  flex: 1;
-  text-align: right;
-  font-size: 30rpx;
-  padding: 8rpx 16rpx;
+
+.setting-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.stepper-btn {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #0F7A38;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.stepper-btn.disabled {
+  background: #CCCCCC;
+}
+
+.stepper-btn:active:not(.disabled) {
+  background: #0a6630;
+}
+
+.stepper-num {
+  width: 80rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
   color: #0F7A38;
 }
+
 .footer {
-  padding: 40rpx 24rpx;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  display: flex;
+  padding: 24rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
   background: #fff;
   border-top: 2rpx solid #EEEEEE;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  gap: 16rpx;
 }
+
 .btn {
-  width: 100%;
+  flex: 1;
   height: 88rpx;
+  border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
-  border-radius: 20rpx;
+  font-size: 30rpx;
+  font-weight: 500;
   margin: 0;
+  border: none;
+  line-height: 1;
 }
-.btn.primary {
+
+.btn::after {
+  border: none;
+}
+
+.btn.reset-btn {
+  background: #fff;
+  color: #666;
+  border: 2rpx solid #DDDDDD;
+}
+
+.btn.cancel-btn {
+  background: #F5F5F5;
+  color: #666;
+}
+
+.btn.primary-btn {
   background: linear-gradient(90deg, #0F7A38, #2BA85A);
   color: #fff;
-  border: none;
+  flex: 1.5;
   box-shadow: 0 4rpx 16rpx rgba(15, 122, 56, 0.2);
 }
-.btn.primary::after {
-  border: none;
+
+.btn.primary-btn.disabled {
+  background: #CCCCCC;
+  box-shadow: none;
 }
