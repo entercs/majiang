@@ -4,14 +4,12 @@
   </view>
 
   <block wx:for="{{groups}}" wx:for-item="group" wx:for-index="gi" wx:key="startTime">
-    <view class="session {{group.ongoing ? 'ongoing' : ''}}">
+    <view class="session">
       <view class="session-header">
-        <text class="session-title">第 {{group.roundNo}} 局</text>
-        <text wx:if="{{group.ongoing}}" class="session-tag-ongoing">进行中</text>
-        <text class="session-time">{{group.timeText}}</text>
+        <text class="session-title">{{group.timeText}}</text>
       </view>
       <view class="session-list">
-        <block wx:for="{{group.transfers}}" wx:for-item="t" wx:key="from">
+        <block wx:for="{{group.transfers}}" wx:for-item="t" wx:key="id">
           <view class="transfer-row">
             <text class="transfer-from">{{t.from}}</text>
             <text class="transfer-arrow">→</text>

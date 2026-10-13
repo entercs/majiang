@@ -2,15 +2,8 @@ const roomStore = require('../../../stores/roomStore');
 const roomService = require('../../../services/roomService');
 const { handleError } = require('../../../services/errorHandler');
 
-// 牌型定义（默认值与 auto-score 的 HM_CARD_TYPES 完全一致）
-const CARD_TYPES = [
-  { key: 'pinghu',      label: '平胡',     fan: 1 },
-  { key: 'qiyidui',     label: '七对',     fan: 15 },
-  { key: 'pengpenghu',  label: '碰碰胡',   fan: 15 },
-  { key: 'qingyise',    label: '清一色',   fan: 15 },
-  { key: 'hunyise',     label: '混一色',   fan: 15 },
-  { key: 'quanqiuren',  label: '全求人',   fan: 30 },
-];
+const huangmei = require('../../../rules/huangmei');
+const CARD_TYPES = huangmei.sections.cardTypes;
 
 const CARD_TYPE_DESCS = {
   pinghu: '最基本的胡牌方式',
@@ -99,6 +92,20 @@ Page({
 
   onReset() {
     if (!this.data.isOwner) return;
+    wx.showModal({
+      title: '恢复默认炮数',
+      content: '将恢复默认炮数，点击「应用」后才会保存到房间。确定重置吗？',
+      confirmText: '重置',
+      cancelText: '取消',
+      success: result => {
+        if (!result.confirm) return;
+        this._resetRuleDraft();
+        wx.showToast({ title: '已重置', icon: 'success', duration: 1000 });
+      },
+    });
+  },
+
+  _resetRuleDraft() {
     // 重置到 CARD_TYPES / WIN_TYPES 内置的默认值（单一数据源）
     this.setData({
       cardTypes: this.data.cardTypes.map(c => {

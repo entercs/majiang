@@ -267,6 +267,7 @@ Page({
         // 原子替换 tempRound → realRound（避免中间状态）
         roomStore.replaceRound(clientId, res.data);
         this._render();
+        wx.showToast({ title: '给分成功', icon: 'success', duration: 1200 });
       } else {
         // 失败：回滚（删除 tempRound）
         roomStore.rounds = roomStore.rounds.filter(r => r._id !== clientId);
@@ -401,21 +402,6 @@ Page({
         }
       },
     });
-  },
-
-  onSelfAvatarChange(e) {
-    const { avatarIndex } = e.detail;
-    const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
-    if (!me) return;
-    // 头像变化时更新本地玩家对象（昵称由用户确认时再定）
-    roomStore.players = roomStore.players.map(p =>
-      p._id === me._id ? { ...p, avatarIndex } : p
-    );
-    // 同步更新弹窗目标数据（不关闭弹窗）
-    this.setData({
-      selfPopupTarget: { ...this.data.selfPopupTarget, avatarIndex },
-    });
-    this._render();
   },
 
   onSelfPopupConfirm(e) {

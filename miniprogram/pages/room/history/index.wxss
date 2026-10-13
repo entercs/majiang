@@ -18,10 +18,6 @@
   overflow: hidden;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
 }
-.session.ongoing {
-  border-left: 6rpx solid #0F7A38;
-  background: #F2FAF5;
-}
 .session-header {
   display: flex;
   align-items: center;
@@ -34,19 +30,6 @@
   font-weight: 500;
   color: #1A1A1A;
 }
-.session-tag-ongoing {
-  font-size: 24rpx;
-  color: #fff;
-  background: #0F7A38;
-  padding: 8rpx 16rpx;
-  border-radius: 12rpx;
-}
-.session-time {
-  font-size: 26rpx;
-  color: #999999;
-  margin-left: auto;
-}
-
 .session-list {
   padding: 8rpx 24rpx 16rpx;
 }

@@ -10,12 +10,6 @@
     </block>
   </view>
 
-  <view class="stats">
-    <view class="stat-row"><text>总场次：</text><text>{{totalRounds}}</text></view>
-    <view class="stat-row"><text>最大番：</text><text>{{maxFan}} 番</text></view>
-    <view class="stat-row"><text>胡牌类型分布：</text><text>{{winTypeSummary}}</text></view>
-  </view>
-
   <view class="footer">
     <button class="btn primary block" bindtap="onBackHome">返回首页</button>
   </view>

@@ -24,7 +24,7 @@
 
     <view class="btn-row">
       <view class="btn cancel" bind:tap="onCancel">取消</view>
-      <view class="btn confirm" bind:tap="onConfirm">确认</view>
+      <button class="btn confirm" disabled="{{!canConfirm}}" bind:tap="onConfirm">确认</button>
     </view>
   </view>
 </view>

@@ -5,30 +5,30 @@ Component({
   },
   data: {
     value: 0,
+    canConfirm: false,
   },
   methods: {
     noop() {},
+    _setValue(value) {
+      this.setData({ value, canConfirm: Number.isSafeInteger(value) && value > 0 });
+    },
     onInput(e) {
-      const raw = String(e.detail.value || '').replace(/[^0-9]/g, '');
-      this.setData({ value: Number(raw) || 0 });
+      const raw = String(e.detail.value || '').trim();
+      this._setValue(/^\d+$/.test(raw) ? Number(raw) : raw);
     },
     onQuickTap(e) {
-      this.setData({ value: Number(e.currentTarget.dataset.v) || 0 });
+      this._setValue(Number(e.currentTarget.dataset.v) || 0);
     },
     onInc() {
-      this.setData({ value: (Number(this.data.value) || 0) + 1 });
+      this._setValue((Number(this.data.value) || 0) + 1);
     },
     onDec() {
       const v = (Number(this.data.value) || 0) - 1;
-      this.setData({ value: v < 0 ? 0 : v });
+      this._setValue(v < 0 ? 0 : v);
     },
     onConfirm() {
       const v = Number(this.data.value) || 0;
-      if (v === 0) {
-        // 静默不处理（不弹提示）
-        this.triggerEvent('cancel');
-        return;
-      }
+      if (!this.data.canConfirm || !Number.isSafeInteger(v) || v <= 0) return;
       this.triggerEvent('confirm', { value: v });
     },
     onCancel() {

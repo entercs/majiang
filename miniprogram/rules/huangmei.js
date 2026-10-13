@@ -2,8 +2,8 @@
 
 const CARD_TYPES = [
   { key: 'pinghu', label: '平胡', fan: 1 },
-  { key: 'qiyidui', label: '七对', fan: 15 },
-  { key: 'pengpenghu', label: '碰碰胡', fan: 15 },
+  { key: 'qiyidui', label: '七对', fan: 10 },
+  { key: 'pengpenghu', label: '碰碰胡', fan: 10 },
   { key: 'qingyise', label: '清一色', fan: 15 },
   { key: 'hunyise', label: '混一色', fan: 15 },
   { key: 'quanqiuren', label: '全求人', fan: 30 },

@@ -12,14 +12,7 @@ const RULE_TYPE_KEYS = ['huangmei', 'sichuan'];
 
 // ============== 黄梅麻将常量 ==============
 
-const HM_CARD_TYPES = [
-  { key: 'pinghu',      label: '平胡',      fan: 1 },
-  { key: 'qiyidui',     label: '七对',      fan: 15 },
-  { key: 'pengpenghu',  label: '碰碰胡',    fan: 15 },
-  { key: 'qingyise',    label: '清一色',    fan: 15 },
-  { key: 'hunyise',     label: '混一色',    fan: 15 },
-  { key: 'quanqiuren',  label: '全求人',    fan: 30 },
-];
+const HM_CARD_TYPES = huangmei.sections.cardTypes;
 const HM_PRIMARY_CARDS = ['pinghu'];
 const HM_CARD_RIVAL = {
   qiyidui: 'pengpenghu', pengpenghu: 'qiyidui',
@@ -417,6 +410,20 @@ Page({
   },
 
   onReset() {
+    wx.showModal({
+      title: '重置当前选择',
+      content: '将恢复本页默认选择并清空给分对象。确定重置吗？',
+      confirmText: '重置',
+      cancelText: '取消',
+      success: result => {
+        if (!result.confirm) return;
+        this._resetSelection();
+        wx.showToast({ title: '已重置', icon: 'success', duration: 1000 });
+      },
+    });
+  },
+
+  _resetSelection() {
     const ruleType = this.data.ruleType;
     if (ruleType === 'huangmei') {
       this.setData({

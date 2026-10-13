@@ -80,7 +80,6 @@
     avatar-index="{{selfPopupTarget.avatarIndex}}"
     total-score="{{selfPopupTarget.totalScore}}"
     bind:close="onSelfPopupClose"
-    bind:avatarchange="onSelfAvatarChange"
     bind:confirm="onSelfPopupConfirm"
     bind:editnick="onSelfEditNick"
   ></player-popup>

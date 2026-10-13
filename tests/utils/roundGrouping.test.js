@@ -6,7 +6,7 @@ describe('groupRoundsBySession', () => {
     expect(groupRoundsBySession(null)).toEqual([]);
   });
 
-  test('单条 round → 1 局', () => {
+  test('单条 round → 1 组', () => {
     const rounds = [{ _id: 'r1', createdAt: 1000, scoreChanges: { A: -5, B: 5 } }];
     const groups = groupRoundsBySession(rounds);
     expect(groups.length).toBe(1);
@@ -15,22 +15,22 @@ describe('groupRoundsBySession', () => {
     expect(groups[0].items.length).toBe(1);
   });
 
-  test('相邻 30s 内 → 同局', () => {
+  test('首笔后恰好 60s → 同组', () => {
     const rounds = [
       { _id: 'r1', createdAt: 1000, scoreChanges: {} },
-      { _id: 'r2', createdAt: 31000, scoreChanges: {} },
+      { _id: 'r2', createdAt: 61000, scoreChanges: {} },
     ];
     const groups = groupRoundsBySession(rounds);
     expect(groups.length).toBe(1);
     expect(groups[0].items.length).toBe(2);
     expect(groups[0].startTime).toBe(1000);
-    expect(groups[0].endTime).toBe(31000);
+    expect(groups[0].endTime).toBe(61000);
   });
 
-  test('间隔 31s → 新局', () => {
+  test('首笔后超过 60s → 新组', () => {
     const rounds = [
       { _id: 'r1', createdAt: 1000, scoreChanges: {} },
-      { _id: 'r2', createdAt: 32000, scoreChanges: {} },
+      { _id: 'r2', createdAt: 61001, scoreChanges: {} },
     ];
     const groups = groupRoundsBySession(rounds);
     expect(groups.length).toBe(2);
@@ -38,12 +38,12 @@ describe('groupRoundsBySession', () => {
     expect(groups[1].items.length).toBe(1);
   });
 
-  test('多笔 round 混合：3 笔同局 + 1 笔新局', () => {
+  test('多笔 round 混合：3 笔同组 + 1 笔新组', () => {
     const rounds = [
       { _id: 'r1', createdAt: 1000, scoreChanges: {} },
       { _id: 'r2', createdAt: 5000, scoreChanges: {} },
       { _id: 'r3', createdAt: 10000, scoreChanges: {} },
-      { _id: 'r4', createdAt: 50000, scoreChanges: {} },
+      { _id: 'r4', createdAt: 70000, scoreChanges: {} },
     ];
     const groups = groupRoundsBySession(rounds);
     expect(groups.length).toBe(2);
@@ -67,23 +67,23 @@ describe('groupRoundsBySession', () => {
       { _id: 'r1', createdAt: 1000, scoreChanges: {} },
       { _id: 'r2', createdAt: 6000, scoreChanges: {} },
     ];
-    // 10s 窗口：间隔 5s → 同局；100s 窗口：5s 也同局
+    // 10s 窗口：间隔 5s → 同组；100s 窗口：5s 也同组
     expect(groupRoundsBySession(rounds, 10000).length).toBe(1);
     expect(groupRoundsBySession(rounds, 100000).length).toBe(1);
-    // 3s 窗口：5s 间隔 → 新局
+    // 3s 窗口：5s 间隔 → 新组
     expect(groupRoundsBySession(rounds, 3000).length).toBe(2);
   });
 });
 
 describe('isOngoing', () => {
-  test('最后一局刚结束 → false', () => {
+  test('最后一组窗口结束 → false', () => {
     const groups = [{ startTime: 1000, endTime: 1000, items: [] }];
-    expect(isOngoing(groups, 1000 + 31000)).toBe(false);
+    expect(isOngoing(groups, 1000 + 60001)).toBe(false);
   });
 
-  test('最后一局仍在 30s 内 → true', () => {
+  test('最后一组仍在 60s 内 → true', () => {
     const groups = [{ startTime: 1000, endTime: 1000, items: [] }];
-    expect(isOngoing(groups, 1000 + 29000)).toBe(true);
+    expect(isOngoing(groups, 1000 + 59000)).toBe(true);
   });
 
   test('空数组 → false', () => {
@@ -128,4 +128,18 @@ describe('roundToTransfers', () => {
   test('空 scoreChanges → 空数组', () => {
     expect(roundToTransfers({}, nameOf)).toEqual([]);
   });
+});
+
+
+test('连续记录不会延长首笔起算的固定窗口，且不修改原始顺序', () => {
+  const rounds = [{ _id: 'late', createdAt: 61001 }, { _id: 'first', createdAt: 1000 },
+    { _id: 'middle', createdAt: 40000 }];
+  const groups = groupRoundsBySession(rounds);
+  expect(groups.map(g => g.items.map(r => r._id))).toEqual([['first', 'middle'], ['late']]);
+  expect(rounds.map(r => r._id)).toEqual(['late', 'first', 'middle']);
+});
+
+test('首笔时间为零时也能正确分组', () => {
+  const groups = groupRoundsBySession([{ createdAt: 0 }, { createdAt: 60000 }, { createdAt: 60001 }]);
+  expect(groups.map(g => g.items.length)).toEqual([2, 1]);
 });

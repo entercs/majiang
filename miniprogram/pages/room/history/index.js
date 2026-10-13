@@ -1,5 +1,5 @@
 const roomStore = require('../../../stores/roomStore');
-const { groupRoundsBySession, formatTime, roundToTransfers } = require('../../../utils/roundGrouping');
+const { groupRoundsBySession, formatDateTime, formatTime, roundToTransfers } = require('../../../utils/roundGrouping');
 
 Page({
   data: {
@@ -8,7 +8,7 @@ Page({
 
   onShow() {
     this._render();
-    // 每秒刷新（让"进行中"标记保持最新）
+    // 房间同步仍在运行，刷新新记录。
     if (this._timer) clearInterval(this._timer);
     this._timer = setInterval(() => this._render(), 1000);
   },
@@ -23,32 +23,25 @@ Page({
 
   _render() {
     const groups = groupRoundsBySession(roomStore.rounds);
-    // "进行中"标签反映房间状态：active → 显示在最新一局；finished → 不显示
-    const isRoomActive = roomStore.roomStatus === 'active';
-
-    const enriched = groups.map((g, idx) => {
+    const enriched = groups.map(g => {
       const nameOf = (id) => {
         const p = roomStore.players.find((x) => x._id === id);
         return p ? p.nickname : id;
       };
-      const transfers = g.items.flatMap((r) => roundToTransfers(r, nameOf));
-      const isLast = g === groups[groups.length - 1];
+      const transfers = g.items.flatMap(r => roundToTransfers(r, nameOf).map((transfer, index) => ({
+        ...transfer,
+        id: `${r._id}-${index}`,
+      })));
       return {
         startTime: g.startTime,
         endTime: g.endTime,
-        timeText: formatTime(g.startTime),
-        ongoing: isLast && isRoomActive,
+        timeText: `${formatDateTime(g.startTime)}:${formatTime(g.startTime).slice(-2)}`,
         transfers,
-        // roundNo 按时间顺序编号（reverse 前 idx=0 是最老的一局）
-        roundNo: idx + 1,
       };
     });
 
-    // 倒序展示（最新一局在最上），reverse 后 roundNo 自动变成反序（最新局号最大）
+    // 最新时间组显示在最上方。
     this.setData({ groups: enriched.reverse() });
   },
 
-  onTapSession(e) {
-    // 暂不展开/折叠；MVP 直接全展开
-  },
 });

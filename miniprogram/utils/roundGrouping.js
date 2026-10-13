@@ -1,44 +1,41 @@
 /**
- * Round 分组：按"局"切分
- * 规则：相邻两条 round 间隔 ≤ WINDOW_MS → 同一局；> WINDOW_MS → 新局
+ * 计分记录分组：从每组首笔起算，60 秒内归为同一组。
  */
 
-const DEFAULT_WINDOW_MS = 30 * 1000;
+const DEFAULT_WINDOW_MS = 60 * 1000;
 
 /**
  * @param {Array} rounds - rounds 数组
- * @param {number} windowMs - 局判定窗口（默认 30 秒）
- * @returns {Array<{startTime, endTime, items}>} - 每局包含 startTime、endTime、rounds 列表
+ * @param {number} windowMs - 首笔起算的分组窗口（默认 60 秒）
+ * @returns {Array<{startTime, endTime, items}>} - 每组包含 startTime、endTime、记录列表
  */
 function groupRoundsBySession(rounds, windowMs = DEFAULT_WINDOW_MS) {
   if (!rounds || rounds.length === 0) return [];
   const sorted = [...rounds].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   const groups = [];
   let current = null;
-  let lastTime = -Infinity;
 
   for (const r of sorted) {
     const t = r.createdAt || 0;
-    if (t - lastTime > windowMs) {
+    if (!current || t - current.startTime > windowMs) {
       if (current) groups.push(current);
       current = { startTime: t, endTime: t, items: [] };
     } else {
       current.endTime = t;
     }
     current.items.push(r);
-    lastTime = t;
   }
   if (current) groups.push(current);
   return groups;
 }
 
 /**
- * 判断最后一局是否"进行中"（now - lastRound.createdAt < windowMs）
+ * 判断最后一组是否仍在首笔起算的时间窗口内
  */
 function isOngoing(groups, now = Date.now(), windowMs = DEFAULT_WINDOW_MS) {
   if (!groups || groups.length === 0) return false;
   const last = groups[groups.length - 1];
-  return (now - (last.endTime || 0)) < windowMs;
+  return now >= last.startTime && now - last.startTime <= windowMs;
 }
 
 /**

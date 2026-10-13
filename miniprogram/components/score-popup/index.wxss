@@ -112,3 +112,19 @@
 .btn:active {
   opacity: 0.8;
 }
+button.btn.confirm {
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+}
+button.btn.confirm::after {
+  border: none;
+}
+button.btn.confirm[disabled] {
+  background: #E5E5E5;
+  color: #999999;
+  box-shadow: none;
+}
+button.btn.confirm[disabled]:active {
+  opacity: 1;
+}

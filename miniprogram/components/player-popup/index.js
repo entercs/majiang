@@ -13,16 +13,11 @@ Component({
     selectedNicknameType: 'system',  // 'system' | 'custom'
     systemNickname: '',
     inputNickname: '',
+    draftAvatarIndex: 0,
   },
   lifetimes: {
     attached() {
       this._initState();
-    },
-  },
-  observers: {
-    'avatarIndex': function(avatarIndex) {
-      const name = AVATAR_NAMES[avatarIndex] || '东风';
-      this.setData({ systemNickname: name });
     },
   },
   methods: {
@@ -31,12 +26,15 @@ Component({
       // 直接从 storage 读自定义昵称（双向同步的关键）
       const customNickname = wx.getStorageSync('customNickname') || '';
       const systemNickname = AVATAR_NAMES[avatarIndex] || '东风';
-      // 有自定义昵称 → 默认选自定义；否则默认选系统昵称
-      const selectedNicknameType = customNickname ? 'custom' : 'system';
+      const currentNickname = this.properties.nickname || '';
+      const selectedNicknameType = currentNickname
+        ? (currentNickname === systemNickname ? 'system' : 'custom')
+        : (customNickname ? 'custom' : 'system');
       this.setData({
+        draftAvatarIndex: avatarIndex,
         selectedNicknameType,
         systemNickname,
-        inputNickname: customNickname,
+        inputNickname: selectedNicknameType === 'custom' ? (currentNickname || customNickname) : customNickname,
       });
     },
 
@@ -49,10 +47,9 @@ Component({
       // 头像变化时更新系统昵称值，但保持用户当前选择的昵称类型
       const systemNickname = AVATAR_NAMES[idx] || '东风';
       this.setData({
-        avatarIndex: idx,
+        draftAvatarIndex: idx,
         systemNickname,
       });
-      this.triggerEvent('avatarchange', { avatarIndex: idx }, true);
     },
 
     onSelectNicknameType(e) {
@@ -71,7 +68,8 @@ Component({
     },
 
     onConfirm() {
-      const { selectedNicknameType, systemNickname, inputNickname, avatarIndex } = this.data;
+      const { selectedNicknameType, systemNickname, inputNickname, draftAvatarIndex } = this.data;
+      const avatarIndex = draftAvatarIndex;
       const nickname = selectedNicknameType === 'system' ? systemNickname : inputNickname;
       console.log('【popup onConfirm】', { nickname, selectedNicknameType, systemNickname, inputNickname, avatarIndex });
       this.triggerEvent('confirm', {
