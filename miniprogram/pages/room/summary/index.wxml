@@ -1,11 +1,14 @@
 <view class="summary">
+  <view class="summary-title">最终排行榜</view>
   <view class="rank-list">
     <block wx:for="{{rankList}}" wx:key="_id">
       <view class="rank-row {{index === 0 ? 'first' : ''}}">
-        <text class="rank-no">{{index + 1}}</text>
-        <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex}}.png"></image>
-        <text class="nick">{{item.nickname}}</text>
-        <text class="score">{{item.total}} 分</text>
+        <view class="rank-person">
+          <text class="rank-no">{{index + 1}}</text>
+          <image class="avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+          <text class="nick">{{item.nickname}}</text>
+        </view>
+        <view class="score"><text class="score-number">{{item.total}}</text><text class="score-unit">分</text></view>
       </view>
     </block>
   </view>

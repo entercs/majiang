@@ -1,5 +1,5 @@
 .auto-score {
-  padding: 24rpx;
+  padding: 24rpx 32rpx;
   padding-bottom: 220rpx;
   min-height: 100vh;
   background: #F7F5F0;
@@ -70,8 +70,8 @@
 }
 .base-score-stepper .stepper-btn {
   flex-shrink: 0;
-  width: 56rpx;
-  height: 56rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -139,7 +139,7 @@
   background: #fff;
   border-radius: 24rpx;
   padding: 24rpx;
-  margin-bottom: 16rpx;
+  margin-bottom: 24rpx;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
 }
 .section-disabled {
@@ -147,14 +147,15 @@
 }
 .section-title {
   font-size: 32rpx;
-  font-weight: 500;
+  font-weight: 600;
   color: #1A1A1A;
   margin-bottom: 16rpx;
 }
 .disabled-hint {
-  color: #999999;
-  font-size: 24rpx;
+  color: #707870;
+  font-size: 26rpx;
   padding: 8rpx 0 0;
+  line-height: 1.5;
 }
 
 /* 子区段：标题左对齐固定宽度，选项右区左对齐 */
@@ -232,21 +233,24 @@
   margin-bottom: 4rpx;
 }
 .bd-col-name {
-  font-size: 24rpx;
-  color: #999999;
+  font-size: 26rpx;
+  color: #707870;
   flex: 1;
+  min-width: 0;
 }
 .bd-col-fan {
-  font-size: 24rpx;
-  color: #999999;
+  font-size: 26rpx;
+  color: #707870;
   width: 80rpx;
   text-align: center;
+  flex: 0 0 80rpx;
 }
 .bd-col-score {
-  font-size: 24rpx;
-  color: #999999;
-  width: 80rpx;
+  font-size: 26rpx;
+  color: #707870;
+  width: 120rpx;
   text-align: right;
+  flex: 0 0 120rpx;
 }
 .breakdown-row {
   display: flex;
@@ -262,6 +266,9 @@
   font-size: 28rpx;
   color: #1A1A1A;
   flex: 1;
+  min-width: 0;
+  padding-right: 12rpx;
+  line-height: 1.5;
 }
 .bd-fan {
   font-size: 28rpx;
@@ -269,13 +276,17 @@
   font-weight: 600;
   width: 80rpx;
   text-align: center;
+  flex: 0 0 80rpx;
+  font-variant-numeric: tabular-nums;
 }
 .bd-score {
   font-size: 28rpx;
   color: #1A1A1A;
   font-weight: 600;
-  width: 80rpx;
+  width: 120rpx;
   text-align: right;
+  flex: 0 0 120rpx;
+  font-variant-numeric: tabular-nums;
 }
 .breakdown-total {
   display: flex;
@@ -289,12 +300,17 @@
   color: #0F7A38;
 }
 .bd-fan-total {
-  font-size: 36rpx;
-  font-weight: 800;
+  font-size: 32rpx;
+  font-weight: 600;
+  flex: 0 0 80rpx;
+  text-align: center;
 }
 .bd-score-total {
   font-size: 32rpx;
-  font-weight: 700;
+  font-weight: 600;
+  flex: 0 0 120rpx;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .bd-cap {
   color: #999999;
@@ -330,13 +346,15 @@
   border-radius: 50%;
 }
 .nick {
-  font-size: 24rpx;
+  font-size: 28rpx;
   color: #1A1A1A;
   margin-top: 8rpx;
   max-width: 90%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 /* 预览 */
@@ -369,9 +387,10 @@
   opacity: 0.9;
 }
 .preview-meta {
-  font-size: 22rpx;
+  font-size: 26rpx;
   opacity: 0.8;
   margin-top: 8rpx;
+  line-height: 1.5;
 }
 
 /* 底部 */
@@ -437,7 +456,7 @@
 }
 .confirm-title {
   font-size: 36rpx;
-  font-weight: 700;
+  font-weight: 600;
   color: #1A1A1A;
   text-align: center;
   margin-bottom: 32rpx;
@@ -489,9 +508,10 @@
   opacity: 0.9;
 }
 .confirm-preview .preview-meta {
-  font-size: 22rpx;
+  font-size: 26rpx;
   opacity: 0.8;
   margin-top: 8rpx;
+  line-height: 1.5;
 }
 .confirm-btns {
   display: flex;
@@ -530,7 +550,7 @@
 }
 .stepper-btn {
   width: 72rpx;
-  height: 64rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -554,21 +574,24 @@
   padding: 0 16rpx;
 }
 .gen-locked-hint {
-  font-size: 22rpx;
-  color: #999999;
+  font-size: 26rpx;
+  color: #707870;
   width: 100%;
+  line-height: 1.5;
 }
 
 /* 四川麻将提示 */
 .sichuan-hint {
-  font-size: 24rpx;
-  color: #999999;
+  font-size: 26rpx;
+  color: #707870;
   padding: 8rpx 0 0;
+  line-height: 1.5;
 }
 .special-hint {
-  font-size: 22rpx;
-  color: #999999;
+  font-size: 26rpx;
+  color: #707870;
   padding: 8rpx 0 0;
+  line-height: 1.5;
 }
 .capped-deduction {
   font-size: 26rpx;
@@ -609,3 +632,7 @@
 }
 
 /* 玩法配置弹窗样式已迁移到独立页面 pages/room/rule-config */
+.breakdown-total > text:first-child {
+  flex: 1;
+  min-width: 0;
+}

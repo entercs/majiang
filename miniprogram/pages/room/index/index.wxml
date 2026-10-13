@@ -7,7 +7,7 @@
   </view>
 
   <!-- 4 家横排（按 seatIndex 排序，人数不限） -->
-  <view class="players-row">
+  <view class="players-row {{playersRow.length <= 4 ? 'players-row-fit' : ''}}">
     <block wx:for="{{playersRow}}" wx:key="_id">
       <view class="player-card {{item._id === currentPlayerId ? 'self' : ''}} {{!item.isOnline ? 'offline' : ''}}" bind:tap="onTapPlayer" data-id="{{item._id}}" data-self="{{item._id === currentPlayerId}}">
         <image class="avatar {{!item.isOnline ? 'offline' : ''}}" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
@@ -39,13 +39,17 @@
       <view class="rank-list">
         <block wx:for="{{rankList}}" wx:key="_id">
           <view class="rank-row {{index === 0 ? 'first' : ''}}" bind:tap="onTapPlayer" data-id="{{item._id}}" data-self="{{item._id === currentPlayerId}}">
-            <text class="rank-no">{{index + 1}}</text>
-            <image class="rank-avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
-            <text class="rank-nick">{{item.nickname}}</text>
-            <text class="rank-delta {{item.lastDelta > 0 ? 'pos' : item.lastDelta < 0 ? 'neg' : ''}}" wx:if="{{item.lastDelta !== 0}}">
-              {{item.lastDelta > 0 ? '+' : ''}}{{item.lastDelta}}
-            </text>
-            <text class="rank-score">{{item.totalScore}} 分</text>
+            <view class="rank-person">
+              <text class="rank-no">{{index + 1}}</text>
+              <image class="rank-avatar" src="/images/avatars/avatar-{{item.avatarIndex || 0}}.png" mode="aspectFit"></image>
+              <text class="rank-nick">{{item.nickname}}</text>
+            </view>
+            <view class="rank-metrics">
+              <view class="rank-score"><text class="rank-score-number">{{item.totalScore}}</text><text class="score-unit">分</text></view>
+              <view class="rank-delta-slot">
+                <text class="rank-delta {{item.lastDelta > 0 ? 'pos' : 'neg'}}" wx:if="{{item.lastDelta !== 0}}">{{item.lastDelta > 0 ? '+' : ''}}{{item.lastDelta}}</text>
+              </view>
+            </view>
           </view>
         </block>
         <view wx:if="{{rankList.length === 0}}" class="empty-rank">还没有人记分，点上方头像开始</view>

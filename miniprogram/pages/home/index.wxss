@@ -1,5 +1,5 @@
 .home {
-  padding: 0 40rpx 60rpx;
+  padding: 0 32rpx 60rpx;
   min-height: 100vh;
   box-sizing: border-box;
   background: #F7F5F0;
@@ -100,7 +100,7 @@
 }
 .section-title {
   font-size: 32rpx;
-  font-weight: 500;
+  font-weight: 600;
   color: #1A1A1A;
   margin-bottom: 16rpx;
   padding-left: 8rpx;
@@ -132,7 +132,7 @@
 }
 .room-item .meta {
   font-size: 28rpx;
-  color: #999999;
+  color: #707870;
 }
 .room-item.finished {
   align-items: center;
@@ -175,7 +175,7 @@
 }
 .help-link {
   font-size: 26rpx;
-  color: #999999;
+  color: #707870;
 }
 
 /* 头像选择弹窗 */

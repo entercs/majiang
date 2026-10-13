@@ -21,10 +21,11 @@
 }
 .title {
   font-size: 36rpx;
-  font-weight: 500;
+  font-weight: 600;
   color: #1A1A1A;
   text-align: center;
   margin-bottom: 32rpx;
+  line-height: 1.4;
 }
 
 .stepper-row {
@@ -34,8 +35,8 @@
   margin-bottom: 32rpx;
 }
 .stepper-btn {
-  width: 64rpx;
-  height: 64rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,7 +98,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 20rpx;
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 500;
 }
 .btn.cancel {
