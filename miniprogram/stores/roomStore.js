@@ -26,6 +26,7 @@ const store = observable({
   },
 
   setRoom({ roomId, roomCode, rule, players, isOwner, currentPlayerId, status }) {
+    if (this.roomId !== roomId) this.rounds = [];
     this.roomId = roomId;
     this.roomCode = roomCode;
     this.rule = rule;
@@ -51,20 +52,17 @@ const store = observable({
    * @param {Object} realRound - 云端返回的完整真实 round
    */
   replaceRound(tempId, realRound) {
-    const idx = this.rounds.findIndex(r => r._id === tempId);
-    if (idx >= 0) {
-      this.rounds[idx] = { ...realRound, clientId: tempId };
-    } else {
-      this.rounds.push({ ...realRound, clientId: tempId });
-    }
+    this.rounds = this.rounds.filter(r => r._id !== tempId && r._id !== realRound._id);
+    this.rounds.push({ ...realRound, clientId: tempId });
+    this.rounds.sort((a, b) => a.roundIndex - b.roundIndex);
   },
 
   getTotalScores() {
     const totals = {};
     this.players.forEach(p => { totals[p._id] = 0; });
     this.rounds.forEach(r => {
-      Object.entries(r.scoreChanges).forEach(([pid, delta]) => {
-        totals[pid] = (totals[pid] || 0) + delta;
+      Object.entries(r.scoreChanges || {}).forEach(([pid, delta]) => {
+        totals[pid] = (totals[pid] || 0) + Number(delta || 0);
       });
     });
     return totals;

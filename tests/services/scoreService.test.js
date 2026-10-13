@@ -211,3 +211,53 @@ describe('scoreService.calculateRound - 庄家加成', () => {
     expect(result.scoreChanges).toEqual({ p0: 3, p1: -1, p2: -1, p3: -1 });
   });
 });
+
+describe('scoreService - 多人边界与庄家杠分回归', () => {
+  test.each([1, 2, 3, 5])('%i 人买马上分仍守恒', count => {
+    const players = Array.from({ length: count }, (_, i) => ({ _id: 'p' + i, seatIndex: i }));
+    const result = calculateRound(makeRule({ maCount: 3 }),
+      { winnerId: 'p0', winType: WIN_TYPE.ZIMO, fan: 0, maResults: [true, true, false] }, players);
+    expect(result.isBalanced).toBe(true);
+    expect(Object.values(result.scoreChanges).reduce((sum, n) => sum + n, 0)).toBe(0);
+  });
+  test('庄家点炮胡与闲家杠分混合，不放大无关玩家的杠分', () => {
+    const result = calculateRound(makeRule({ dealerMul: 2, dianpaoMul: 1, mingGangScore: 1 }),
+      { winnerId: 'p0', loserId: 'p2', winType: WIN_TYPE.DIANPAO, fan: 1,
+        gangEvents: [{ type: 'ming', playerId: 'p1' }] }, makePlayers());
+    expect(result.scoreChanges).toEqual({ p0: 1, p1: 3, p2: -3, p3: -1 });
+    expect(result.isBalanced).toBe(true);
+  });
+  test('庄家点炮给闲家只加倍胡分', () => {
+    const result = calculateRound(makeRule({ dealerMul: 2, dianpaoMul: 1 }),
+      { winnerId: 'p1', loserId: 'p0', winType: WIN_TYPE.DIANPAO, fan: 1 }, makePlayers());
+    expect(result.scoreChanges).toEqual({ p0: -2, p1: 2, p2: 0, p3: 0 });
+  });
+  test('无庄家和双方均为闲家时不加倍', () => {
+    const input = { winnerId: 'p1', loserId: 'p2', winType: WIN_TYPE.DIANPAO, fan: 1 };
+    const rule = makeRule({ dealerMul: 2, dianpaoMul: 1 });
+    expect(calculateRound(rule, input, makePlayers()).scoreChanges).toEqual({ p0: 0, p1: 1, p2: -1, p3: 0 });
+    const players = makePlayers().map(p => ({ ...p, seatIndex: 10 }));
+    expect(calculateRound(rule, input, players).scoreChanges).toEqual({ p0: 0, p1: 1, p2: -1, p3: 0 });
+  });
+  test('单人房间自摸和暗杠没有对手可扣分', () => {
+    const result = calculateRound(makeRule(), { winnerId: 'p0', winType: WIN_TYPE.ZIMO, fan: 1,
+      gangEvents: [{ playerId: 'p0', type: 'an' }] }, [makePlayers()[0]]);
+    expect(result.scoreChanges).toEqual({ p0: 0 });
+  });
+  test('没有买马命中、空杠记录和流局时无额外转移', () => {
+    const result = calculateRound(makeRule({ maCount: 2 }), { winnerId: 'p0', fan: 0,
+      winType: 'liuju', gangEvents: null, maResults: [false] }, makePlayers());
+    expect(result.scoreChanges).toEqual({ p0: 0, p1: 0, p2: 0, p3: 0 });
+    expect(calculateRound(makeRule({ maCount: 2 }), { winnerId: 'p0', fan: 0,
+      winType: 'liuju', gangEvents: null, maResults: null }, makePlayers()).isBalanced).toBe(true);
+  });
+});
+
+
+test('流局缺少胡牌者或点炮者时，庄家倍数不产生分数', () => {
+  const rule = makeRule({ dealerMul: 2 });
+  for (const input of [{ winnerId: 'p0' }, { loserId: 'p0' }]) {
+    const result = calculateRound(rule, { ...input, winType: 'liuju', fan: 0 }, makePlayers());
+    expect(result.scoreChanges).toEqual({ p0: 0, p1: 0, p2: 0, p3: 0 });
+  }
+});

@@ -1,6 +1,6 @@
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-const db = cloud.database();
+const db = cloud.database({ throwOnNotFound: false });
 
 /**
  * 生成房间小程序码（弱一致：失败返回 null，不抛错）
@@ -27,9 +27,17 @@ async function generateRoomQRCode(roomId, roomCode) {
     });
 
     // 3. 写回 rooms 文档
-    await db.collection('rooms').doc(roomId).update({
-      data: { qrCodeFileID: uploadRes.fileID },
+    const saved = await db.runTransaction(async transaction => {
+      const ref = transaction.collection('rooms').doc(roomId);
+      const room = (await ref.get()).data;
+      if (!room || room.status !== 'active') return false;
+      await ref.update({ data: { qrCodeFileID: uploadRes.fileID } });
+      return true;
     });
+    if (!saved) {
+      await cleanupRoomQRCode(uploadRes.fileID);
+      return null;
+    }
 
     return uploadRes.fileID;
   } catch (err) {

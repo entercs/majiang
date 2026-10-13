@@ -9,7 +9,25 @@ function joinRoom({ roomCode, nickname, avatarIndex, clientId, nicknameAuto }) {
 }
 
 function updateRule({ roomId, rule }) {
-  return callFunction('updateRule', { roomId, rule });
+  const appStore = require('../stores/appStore');
+  return callFunction('updateRule', { roomId, rule, memberClientId: appStore.clientId });
+}
+
+async function getRoomSnapshot(roomId, { heartbeat = false } = {}) {
+  const appStore = require('../stores/appStore');
+  let offset = 0;
+  let snapshot;
+  const rounds = [];
+  do {
+    const res = await callFunction('getRoomSnapshot', {
+      roomId, memberClientId: appStore.clientId, heartbeat: heartbeat && offset === 0,
+      offset, throughRoundIndex: snapshot ? snapshot.throughRoundIndex : undefined,
+    });
+    if (!snapshot) snapshot = res.data;
+    rounds.push(...res.data.rounds);
+    offset = res.data.nextOffset;
+  } while (offset != null);
+  return { ...snapshot, rounds };
 }
 
 function getRoom(roomId) {
@@ -39,4 +57,4 @@ function getRoomQRCode({ roomCode }) {
   return callFunction('getRoomQRCode', { roomCode });
 }
 
-module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, leaveRoom, getMyRooms, getRoomQRCode };
+module.exports = { createRoom, joinRoom, updateRule, getRoom, getRoomStatus, getPlayers, leaveRoom, getMyRooms, getRoomQRCode, getRoomSnapshot };

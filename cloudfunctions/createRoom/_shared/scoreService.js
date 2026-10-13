@@ -25,6 +25,12 @@ function calculateRound(rule, input, players) {
     applyDianpao(winnerId, loserId, huScore, rule.dianpaoMul, scoreChanges);
   }
 
+  // 庄家倍数只应用于胡牌转移，避免将其他玩家杠分一起放大而破坏守恒。
+  if (rule.dealerMul > 1) {
+    applyDealerMul(players, winnerId, loserId, winType, rule.dealerMul, scoreChanges);
+  }
+
+
   // 2. Gang events
   if (gangEvents && gangEvents.length > 0) {
     applyGangEvents(rule, gangEvents, players, scoreChanges, breakdown);
@@ -35,10 +41,6 @@ function calculateRound(rule, input, players) {
     applyMa(rule, winnerId, maResults, players, scoreChanges, breakdown);
   }
 
-  // 4. Dealer multiplier
-  if (rule.dealerMul > 1) {
-    applyDealerMul(players, winnerId, loserId, winType, rule.dealerMul, scoreChanges);
-  }
 
   const isBalanced = Object.values(scoreChanges).reduce((a, b) => a + b, 0) === 0;
 
@@ -47,9 +49,11 @@ function calculateRound(rule, input, players) {
 
 function applyZimo(players, winnerId, huScore, mul, scoreChanges) {
   const perLose = huScore * mul;
+  const othersCount = Math.max(players.length - 1, 0);
+  if (othersCount === 0) return; // N=1, no-op（守恒：没变化）
   players.forEach((p) => {
     if (p._id === winnerId) {
-      scoreChanges[p._id] += perLose * 3;
+      scoreChanges[p._id] += perLose * othersCount;
     } else {
       scoreChanges[p._id] -= perLose;
     }
@@ -58,8 +62,8 @@ function applyZimo(players, winnerId, huScore, mul, scoreChanges) {
 
 function applyDianpao(winnerId, loserId, huScore, mul, scoreChanges) {
   const pay = huScore * mul;
-  scoreChanges[winnerId] = (scoreChanges[winnerId] || 0) + pay;
-  scoreChanges[loserId] = (scoreChanges[loserId] || 0) - pay;
+  scoreChanges[winnerId] += pay;
+  scoreChanges[loserId] -= pay;
 }
 
 function applyGangEvents(rule, gangEvents, players, scoreChanges, breakdown) {
@@ -70,16 +74,18 @@ function applyGangEvents(rule, gangEvents, players, scoreChanges, breakdown) {
 
     if (ev.type === GANG_TYPE.MING && ev.targetPlayerId) {
       // 被点杠：点杠者付分给杠牌者（杠牌者得、点杠者失）
-      scoreChanges[ev.playerId] = (scoreChanges[ev.playerId] || 0) + score;
-      scoreChanges[ev.targetPlayerId] = (scoreChanges[ev.targetPlayerId] || 0) - score;
+      scoreChanges[ev.playerId] += score;
+      scoreChanges[ev.targetPlayerId] -= score;
       breakdown.gangDetails.push({ type: 'ming点杠', playerId: ev.playerId, target: ev.targetPlayerId, score });
     } else {
-      // 抓牌/暗/补杠：3 家各付给杠牌者
+      // 抓牌/暗/补杠：其他各家各付给杠牌者
+      const othersCount = Math.max(players.length - 1, 0);
+      if (othersCount === 0) return;
       players.forEach((p) => {
         if (p._id === ev.playerId) {
-          scoreChanges[p._id] = (scoreChanges[p._id] || 0) + score * 3;
+          scoreChanges[p._id] += score * othersCount;
         } else {
-          scoreChanges[p._id] = (scoreChanges[p._id] || 0) - score;
+          scoreChanges[p._id] -= score;
         }
       });
       breakdown.gangDetails.push({ type: ev.type, playerId: ev.playerId, score, perLose: score });
@@ -91,14 +97,14 @@ function applyMa(rule, winnerId, maResults, players, scoreChanges, breakdown) {
   const hitCount = maResults.filter(Boolean).length;
   if (hitCount === 0) return;
   const total = hitCount * rule.baseScore;
-  // 守恒分配：3 家各付 ceil(total/3)，胡牌者独得 (perLose * 3) 分
-  // 余数 (perLose*3 - total) 归胡牌者 → 守恒: 3*perLose - perLose*3 = 0
-  const perLose = Math.ceil(total / 3);
-  const winnerGain = perLose * 3;
-  scoreChanges[winnerId] = (scoreChanges[winnerId] || 0) + winnerGain;
+  const othersCount = Math.max(players.length - 1, 0);
+  if (othersCount === 0) return;
+  const perLose = Math.ceil(total / othersCount);
+  const winnerGain = perLose * othersCount;
+  scoreChanges[winnerId] += winnerGain;
   players.forEach((p) => {
     if (p._id !== winnerId) {
-      scoreChanges[p._id] = (scoreChanges[p._id] || 0) - perLose;
+      scoreChanges[p._id] -= perLose;
     }
   });
   breakdown.maDetails.push({ hitCount, total, perLose, winnerGain });
@@ -109,23 +115,16 @@ function applyDealerMul(players, winnerId, loserId, winType, dealerMul, scoreCha
   if (!dealer) return;
   const dealerId = dealer._id;
 
-  if (ZIMO_TYPES.has(winType) && winnerId === dealerId) {
-    // 庄家自摸：所有玩家都 × dealerMul
-    players.forEach((p) => {
-      scoreChanges[p._id] = scoreChanges[p._id] * dealerMul;
-    });
-  } else if (winnerId === dealerId) {
-    // 庄家胡（点炮）：庄家和点炮者都 × dealerMul
-    scoreChanges[dealerId] = scoreChanges[dealerId] * dealerMul;
-    if (loserId) {
-      scoreChanges[loserId] = scoreChanges[loserId] * dealerMul;
+  if (ZIMO_TYPES.has(winType)) {
+    if (winnerId === dealerId) {
+      players.forEach(p => { scoreChanges[p._id] *= dealerMul; });
     }
-  } else if (loserId === dealerId) {
-    // 庄家点炮：庄家和胡牌者都 × dealerMul
-    scoreChanges[dealerId] = scoreChanges[dealerId] * dealerMul;
-    if (winnerId) {
-      scoreChanges[winnerId] = scoreChanges[winnerId] * dealerMul;
-    }
+    return; // 自摸不应使用残留的 loserId
+  }
+  if (!DIANPAO_TYPES.has(winType)) return;
+  if (winnerId === dealerId || loserId === dealerId) {
+    scoreChanges[winnerId] *= dealerMul;
+    scoreChanges[loserId] *= dealerMul;
   }
 }
 

@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-const db = cloud.database();
+// 文档不存在时返回 null，支持事务中的首次创建与旧记录兼容。
+const db = cloud.database({ throwOnNotFound: false });
 const { ROOM_STATUS } = require('./_shared/constants');
 const { generateRoomQRCode } = require('./_shared/qrCodeService');
 

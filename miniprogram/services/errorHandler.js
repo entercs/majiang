@@ -31,7 +31,7 @@ function handleError(err, pageCtx) {
 
   if (config.redirectHome && pageCtx) {
     setTimeout(() => {
-      wx.switchTab({ url: '/pages/home/index' });
+      wx.reLaunch({ url: '/pages/home/index' });
     }, 1500);
   }
 

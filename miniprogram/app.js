@@ -33,6 +33,7 @@ App({
   },
 
   onShow(options) {
+    require('./stores/syncWatcher').resume();
     // 扫码从后台唤醒也会走这里（同样需要 6 位数字过滤）
     if (options && options.scene && /^\d{6}$/.test(String(options.scene))) {
       this.globalData.pendingJoinCode = String(options.scene);
@@ -43,5 +44,9 @@ App({
     console.error('App onError:', err);
     const { reportError } = require('./utils/logger');
     reportError('app.onError', err);
+  },
+
+  onHide() {
+    require('./stores/syncWatcher').suspend();
   },
 })

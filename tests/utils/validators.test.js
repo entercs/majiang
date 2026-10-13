@@ -41,15 +41,15 @@ describe('validators', () => {
   });
 
   describe('isValidAvatarIndex', () => {
-    test('accepts 0-7', () => {
+    test('accepts 0-6', () => {
       expect(v.isValidAvatarIndex(0)).toBe(true);
-      expect(v.isValidAvatarIndex(7)).toBe(true);
+      expect(v.isValidAvatarIndex(6)).toBe(true);
     });
     test('rejects < 0', () => {
       expect(v.isValidAvatarIndex(-1)).toBe(false);
     });
-    test('rejects > 7', () => {
-      expect(v.isValidAvatarIndex(8)).toBe(false);
+    test('rejects >= 7', () => {
+      expect(v.isValidAvatarIndex(7)).toBe(false);
     });
   });
 

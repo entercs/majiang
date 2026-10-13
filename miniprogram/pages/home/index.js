@@ -38,7 +38,7 @@ function _formatClosedAt(ts) {
 
 function _decorateMyRooms(data) {
   return {
-    active: data.active || [],
+    active: (data.active || []).map(r => ({ ...r, onlineCount: null })),
     finished: (data.finished || []).map(r => ({ ...r, closedAtText: _formatClosedAt(r.closedAt) })),
   };
 }
@@ -63,10 +63,17 @@ Page({
   },
 
   onShow() {
+    this._roomsLoaded = false;
+    this.setData({ myRooms: { active: [], finished: [] } });
     // 小程序从后台被扫码唤醒时，app.onShow 也会更新 pendingJoinCode，这里补消费
     this._consumePendingJoinCode();
     this._renderMyRooms();
+    clearInterval(this._roomsTimer);
+    this._roomsTimer = setInterval(() => this._renderMyRooms(), 30000);
   },
+
+  onHide() { clearInterval(this._roomsTimer); },
+  onUnload() { clearInterval(this._roomsTimer); },
 
   _consumePendingJoinCode(options) {
     // 1. 分享卡片路径（onLoad 拿得到 joinCode）
@@ -110,15 +117,16 @@ Page({
   _renderMyRooms() {
     // 1. 先用缓存立即渲染
     const cached = _loadMyRoomsCache();
-    if (cached) {
+    if (cached && !this._roomsLoaded) {
       this.setData({ myRooms: _decorateMyRooms(cached) });
     }
     // 2. 异步刷新
     roomService.getMyRooms({ clientId: appStore.clientId })
       .then((res) => {
         if (res.code === 'OK') {
+          this._roomsLoaded = true;
           _saveMyRoomsCache(res.data);
-          this.setData({ myRooms: _decorateMyRooms(res.data) });
+          this.setData({ myRooms: { ..._decorateMyRooms(res.data), active: res.data.active || [] } });
         } else {
           handleError(res, this);
         }
@@ -132,6 +140,8 @@ Page({
   },
 
   _doCreateRoom(nickname, baseScore) {
+    if (this._creating) return;
+    this._creating = true;
     console.log('【home _doCreateRoom】nickname:', nickname, '!nickname:', !nickname, 'appStore.nickname:', appStore.nickname, 'pendingNickname:', this.data.pendingNickname);
     wx.showLoading({ title: '创建中...' });
     roomService.createRoom({
@@ -159,7 +169,7 @@ Page({
     }).catch((err) => {
       wx.hideLoading();
       handleError(err, this);
-    });
+    }).finally(() => { this._creating = false; });
   },
 
   onBaseScoreConfirm(e) {
@@ -189,24 +199,7 @@ Page({
 
   // 点击"进行中"分区某条：重入房间（joinRoom 会找到旧 player）
   onTapActive(e) {
-    const { roomid, roomcode } = e.currentTarget.dataset;
-    const nickname = appStore.nickname || '';
-    wx.showLoading({ title: '加入中...' });
-    roomService.joinRoom({
-      roomCode: roomcode,
-      nickname,
-      avatarIndex: appStore.avatarIndex || 0,
-      clientId: appStore.clientId,
-      // 有自定义昵称 → 手动模式（需同步）；没有 → 自动模式
-      nicknameAuto: !appStore.nickname,
-    }).then((res) => {
-      wx.hideLoading();
-      if (res.code === 'OK') {
-        wx.reLaunch({ url: `/pages/room/index/index?roomId=${res.data.roomId}` });
-      } else {
-        handleError(res, this);
-      }
-    }).catch((err) => { wx.hideLoading(); handleError(err, this); });
+    this._doJoin(e.currentTarget.dataset.roomcode, appStore.nickname || '');
   },
 
   // 点击"已结束"分区某条：跳到 summary（只读）
@@ -216,6 +209,8 @@ Page({
   },
 
   _doJoin(roomCode, nickname) {
+    if (this._joining) return;
+    this._joining = true;
     wx.showLoading({ title: '加入中...' });
     roomService.joinRoom({
       roomCode,
@@ -234,11 +229,13 @@ Page({
     }).catch((err) => {
       wx.hideLoading();
       handleError(err, this);
-    });
+    }).finally(() => { this._joining = false; });
   },
 
   // 扫码加入：失败时弹明确的 modal（区别于手输房间号的通用 toast）
   _scanJoin(roomCode) {
+    if (this._joining) return;
+    this._joining = true;
     wx.showLoading({ title: '加入中...' });
     roomService.joinRoom({
       roomCode,
@@ -256,7 +253,7 @@ Page({
     }).catch((err) => {
       wx.hideLoading();
       this._showScanJoinError(err.code);
-    });
+    }).finally(() => { this._joining = false; });
   },
 
   _showScanJoinError(code) {

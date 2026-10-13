@@ -2,9 +2,11 @@
   "name": "majiang",
   "version": "1.0.0",
   "scripts": {
+    "pretest": "node scripts/prepare-cloudfunctions.js --check",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "prepare:cloud": "node scripts/prepare-cloudfunctions.js",
     "check:banned": "node scripts/check-banned-words.js"
   },
   "devDependencies": {

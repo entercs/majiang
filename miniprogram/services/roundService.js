@@ -12,7 +12,8 @@ const { callFunction } = require('./cloud');
  * @returns {Promise<{code: string, data?: Object, message?: string}>}
  */
 function submitRound({ roomId, clientId, playerId, type, scoreChanges, input }) {
-  const data = { roomId, clientId };
+  const appStore = require('../stores/appStore');
+  const data = { roomId, clientId, memberClientId: appStore.clientId };
   if (playerId) data.playerId = playerId;
   if (type) data.type = type;
   if (scoreChanges) data.scoreChanges = scoreChanges;
@@ -20,9 +21,15 @@ function submitRound({ roomId, clientId, playerId, type, scoreChanges, input }) 
   return callFunction('settleRound', data);
 }
 
-function getRounds(roomId) {
+async function getRounds(roomId) {
   const db = wx.cloud.database();
-  return db.collection('rounds').where({ roomId }).orderBy('roundIndex', 'asc').get().then(r => r.data);
+  const rounds = [];
+  for (let offset = 0; ; offset += 20) {
+    const page = await db.collection('rounds').where({ roomId }).orderBy('roundIndex', 'asc')
+      .orderBy('_id', 'asc').skip(offset).limit(20).get();
+    rounds.push(...page.data);
+    if (page.data.length < 20) return rounds;
+  }
 }
 
 function watchRounds(roomId, onChange) {

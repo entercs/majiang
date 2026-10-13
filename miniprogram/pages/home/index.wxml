@@ -33,7 +33,7 @@
       <view class="room-item active" wx:for="{{myRooms.active}}" wx:key="roomId"
             bind:tap="onTapActive" data-roomid="{{item.roomId}}" data-roomcode="{{item.roomCode}}">
         <text class="code">{{item.roomCode}}</text>
-        <text class="meta">{{item.onlineCount}} 人在线</text>
+        <text class="meta">{{item.onlineCount === null ? '正在查询房间状态' : item.onlineCount > 0 ? item.onlineCount + ' 人在线' : '暂无人在房间'}}</text>
       </view>
     </view>
   </view>

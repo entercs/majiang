@@ -27,3 +27,6 @@ build/
 
 # WeChat DevTools private config (per-machine, not for VCS)
 project.private.config.json
+
+# Test reports
+coverage/

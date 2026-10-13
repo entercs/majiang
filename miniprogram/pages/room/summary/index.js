@@ -40,15 +40,8 @@ Page({
 
   // 来自云端（首页"已结束"直接查看战绩）
   _loadFromCloud(roomId) {
-    const db = wx.cloud.database();
-    Promise.all([
-      db.collection('rooms').doc(roomId).get(),
-      db.collection('players').where({ roomId }).get(),
-      db.collection('rounds').where({ roomId }).orderBy('roundIndex', 'asc').get(),
-    ]).then(([roomRes, playersRes, roundsRes]) => {
-      const players = playersRes.data;
-      const rounds = roundsRes.data;
-
+    const roomService = require('../../../services/roomService');
+    roomService.getRoomSnapshot(roomId).then(({ players, rounds }) => {
       // 算总分
       const totals = {};
       players.forEach(p => { totals[p._id] = 0; });

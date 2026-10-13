@@ -183,6 +183,10 @@ Page({
     this._recompute();
   },
 
+  onShow() {
+    if (roomStore.roomId && roomStore.currentPlayerId) this._recompute();
+  },
+
   // ============== 玩法切换 ==============
 
   onRuleTypeChange(e) {
@@ -452,10 +456,17 @@ Page({
   },
 
   onConfirm() {
+    if (this._submitting) return;
     this.setData({ showConfirmDialog: false });
     const amount = this.data.amount;
     const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
     const targetId = this.data.targetId;
+    if (!me || targetId === me._id || !roomStore.players.some(p => p._id === targetId) || !Number.isSafeInteger(amount) || amount <= 0) {
+      wx.showToast({ title: '给分信息无效', icon: 'none' });
+      return;
+    }
+    this._submitting = true;
+    const submittedRoomId = roomStore.roomId;
     const scoreChanges = { [targetId]: amount, [me._id]: -amount };
     const clientId = 'auto_' + generateTempId();
     wx.showLoading({ title: '应用中...' });
@@ -468,12 +479,15 @@ Page({
     }).then((res) => {
       wx.hideLoading();
       if (res.code === 'OK') {
+        if (roomStore.roomId !== submittedRoomId) return;
+        roomStore.replaceRound(clientId, res.data);
         wx.showToast({ title: '已应用', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 600);
       } else {
         handleError({ code: res.code, message: res.message }, this);
       }
-    }).catch(err => { wx.hideLoading(); handleError(err, this); });
+    }).catch(err => { wx.hideLoading(); handleError(err, this); })
+      .finally(() => { this._submitting = false; });
   },
 
   onCancel() {

@@ -1,88 +1,70 @@
-const playerService = require('../services/playerService');
-const roundService = require('../services/roundService');
 const roomService = require('../services/roomService');
 const roomStore = require('./roomStore');
+let session = null;
+let suspended = false;
 
-let pollTimer = null;
-let watchCleanup = null;
-let stopRequested = false;
-
-const ROOM_STATUS = { ACTIVE: 'active', FINISHED: 'finished' };
-
-/**
- * 启动房间同步（纯轮询）
- * @param {string} roomId
- * @param {Object} callbacks { onSyncStatus, onPlayersChange, onRoundsChange, onRuleChange, onRoomClosed }
- */
-function start(roomId, callbacks) {
+function start(roomId, callbacks = {}) {
   stop();
-  stopRequested = false;
+  session = { roomId, callbacks, timer: null, lastHeartbeat: 0 };
   callbacks.onSyncStatus && callbacks.onSyncStatus('connecting');
-
-  // 立即拉一次
-  _pullOnce(roomId, callbacks);
-
-  // 2 秒轮询
-  pollTimer = setInterval(() => {
-    if (!stopRequested) _pullOnce(roomId, callbacks);
-  }, 2000);
+  if (!suspended) pull(session);
 }
 
-function _pullOnce(roomId, callbacks) {
-  Promise.all([
-    playerService.getPlayers(roomId),
-    roundService.getRounds(roomId),
-    roomService.getRoomStatus(roomId),  // 拉房间状态
-  ]).then(([players, cloudRounds, roomStatus]) => {
-    if (stopRequested) return;
-
-    // 房间被关闭 → 弹窗并跳转到总结算页
-    if (roomStatus !== ROOM_STATUS.ACTIVE) {
+async function pull(current) {
+  // 串行轮询；切换房间、切后台后，旧请求不得覆盖新状态。
+  const initialIds = new Set(roomStore.rounds.map(r => r._id));
+  const heartbeat = Date.now() - current.lastHeartbeat >= 30000;
+  try {
+    const snapshot = await roomService.getRoomSnapshot(current.roomId, { heartbeat });
+    if (session !== current || suspended || roomStore.roomId !== current.roomId) return;
+    if (heartbeat) current.lastHeartbeat = Date.now();
+    const cloudClientIds = new Set(snapshot.rounds.map(r => r.clientId));
+    const cloudIds = new Set(snapshot.rounds.map(r => r._id));
+    // 已确认历史以云端完整快照为准，只保留未确认或请求期间刚确认的记录。
+    const pending = snapshot.room.status === 'active' ? roomStore.rounds.filter(r =>
+      !cloudIds.has(r._id) && !cloudClientIds.has(r._id) &&
+      (r.isOptimistic || !initialIds.has(r._id))) : [];
+    roomStore.setPlayers(snapshot.players);
+    roomStore.setRounds([...snapshot.rounds, ...pending].sort((a, b) => a.roundIndex - b.roundIndex));
+    roomStore.setRule(snapshot.rule);
+    roomStore.roomStatus = snapshot.room.status;
+    current.callbacks.onSyncStatus && current.callbacks.onSyncStatus('connected');
+    current.callbacks.onPlayersChange && current.callbacks.onPlayersChange(snapshot.players);
+    current.callbacks.onRoundsChange && current.callbacks.onRoundsChange(roomStore.rounds);
+    current.callbacks.onRuleChange && current.callbacks.onRuleChange(snapshot.rule);
+    if (snapshot.room.status !== 'active') {
       stop();
-      roomStore.roomStatus = ROOM_STATUS.FINISHED;
-      callbacks.onRoomClosed && callbacks.onRoomClosed();
+      current.callbacks.onRoomClosed && current.callbacks.onRoomClosed();
       return;
     }
-
-    roomStore.setPlayers(players);
-    const merged = _mergeRounds(roomStore.rounds, cloudRounds);
-    roomStore.setRounds(merged);
-    callbacks.onSyncStatus && callbacks.onSyncStatus('connected');
-    callbacks.onPlayersChange && callbacks.onPlayersChange(players);
-    callbacks.onRoundsChange && callbacks.onRoundsChange(merged);
-  }).catch(() => { /* 静默失败，下次轮询重试 */ });
-}
-
-/**
- * 合并本地 rounds（含未确认的 tempRound）和云端 rounds
- */
-function _mergeRounds(localRounds, cloudRounds) {
-  const map = new Map();
-  for (const r of (cloudRounds || [])) {
-    map.set(r._id, r);
+  } catch (err) {
+    if (session !== current || suspended) return;
+    console.warn('room sync failed:', err.code || err.message);
+    current.callbacks.onSyncStatus && current.callbacks.onSyncStatus('reconnecting');
   }
-  for (const r of (localRounds || [])) {
-    if (r.isOptimistic) {
-      const real = (cloudRounds || []).find(c => c.clientId === r._id);
-      if (real) {
-        map.set(real._id, { ...real, clientId: r._id });
-        map.delete(r._id);
-      } else if (!map.has(r._id)) {
-        map.set(r._id, r);
-      }
-    } else {
-      if (!map.has(r._id)) {
-        map.set(r._id, r);
-      }
-    }
-  }
-  return Array.from(map.values()).sort((a, b) => a.roundIndex - b.roundIndex);
+  if (session === current && !suspended) current.timer = setTimeout(() => pull(current), 2000);
 }
 
 function stop() {
-  stopRequested = true;
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  if (watchCleanup) { watchCleanup(); watchCleanup = null; }
+  if (session && session.timer) clearTimeout(session.timer);
+  session = null;
 }
 
-module.exports = { start, stop };
+function suspend() {
+  suspended = true;
+  if (session) {
+    if (session.timer) clearTimeout(session.timer);
+    session = { ...session, timer: null };
+  }
+}
+
+function resume() {
+  if (!suspended) return;
+  suspended = false;
+  if (session) {
+    session.lastHeartbeat = 0;
+    pull(session);
+  }
+}
+
+module.exports = { start, stop, suspend, resume };

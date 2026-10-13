@@ -22,7 +22,8 @@ function watchPlayers(roomId, onChange) {
 
 function updatePlayer({ roomId, playerId, nickname, avatarIndex }) {
   console.log('【playerService.updatePlayer】', { roomId, playerId, nickname, avatarIndex });
-  return callFunction('updatePlayer', { roomId, playerId, nickname, avatarIndex });
+  const appStore = require('../stores/appStore');
+  return callFunction('updatePlayer', { roomId, playerId, nickname, avatarIndex, memberClientId: appStore.clientId });
 }
 
 module.exports = { getPlayers, watchPlayers, updatePlayer };

@@ -1,88 +1,44 @@
 const cloud = require('wx-server-sdk');
-cloud.init({ env: 'majing-d6gx0f5mm301172e1' });
-const db = cloud.database();
-const _ = db.command;
-const { ROOM_STATUS } = require('./_shared/constants');
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+// 文档不存在时返回 null，支持事务中的首次创建与旧记录兼容。
+const db = cloud.database({ throwOnNotFound: false });
+const { getAll, closeReason } = require('./_shared/roomLifecycle');
 const { cleanupRoomQRCode } = require('./_shared/qrCodeService');
-
-// 30 分钟无活动 → 自动关闭
-const INACTIVE_TIMEOUT_MS = 30 * 60 * 1000;
-// 空房（0 人在线）5 分钟 → 自动关闭
-const EMPTY_TIMEOUT_MS = 5 * 60 * 1000;
 
 exports.main = async () => {
   const now = Date.now();
-  const inactiveCutoff = now - INACTIVE_TIMEOUT_MS;
-
-  const roomsRes = await db.collection('rooms')
-    .where({ status: ROOM_STATUS.ACTIVE })
-    .limit(100)
-    .get();
-
+  // 扫描全部活动房间，不固定只扫前 100 个。
+  const rooms = await getAll(db.collection('rooms').where({ status: 'active' }).orderBy('_id', 'asc'));
   let closed = 0;
-  for (const room of roomsRes.data) {
-    // ─── 分支 A：空房 5 分钟关停 ───
-    // emptyAt 由 leaveRoom 在最后一人离线时写入，joinRoom 重入时清除
-    // 所以 emptyAt 存在等价于房间无人
-    if (room.emptyAt != null) {
-      if (room.emptyAt + EMPTY_TIMEOUT_MS <= now) {
-        const qrCodeFileID = room.qrCodeFileID;
-        await db.collection('rooms').doc(room._id).update({
-          data: {
-            status: ROOM_STATUS.FINISHED,
-            closedAt: now,
-            closedBy: 'auto-empty',
-            qrCodeFileID: _.remove(),
-          },
-        });
-        // 异步清理云存储文件（best-effort，失败不影响关房）
-        cleanupRoomQRCode(qrCodeFileID).catch(err =>
-          console.error('QR cleanup background error:', err.message)
-        );
-        closed++;
-      }
-      continue;
-    }
-
-    // ─── 分支 B：30 分钟无活动关停 ───
-    // 取最后活动时间的基准：room.lastActivityAt（settleRound 更新）或 room.createdAt
-    const lastActivityAt = room.lastActivityAt || room.createdAt;
-    if (lastActivityAt >= inactiveCutoff) continue; // 最近有活动，跳过
-
-    // 兜底：去查 rounds 表取最后一笔的时间（兼容没有 lastActivityAt 的旧房间）
-    const lastRoundRes = await db.collection('rounds')
-      .where({ roomId: room._id })
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
-    const finalActivity = lastRoundRes.data.length > 0
-      ? Math.max(lastRoundRes.data[0].createdAt, lastActivityAt)
-      : lastActivityAt;
-
-    if (finalActivity < inactiveCutoff) {
-      const qrCodeFileID = room.qrCodeFileID;
-      await db.collection('rooms').doc(room._id).update({
-        data: {
-          status: ROOM_STATUS.FINISHED,
-          closedAt: now,
-          closedBy: 'auto-timeout',
-          qrCodeFileID: _.remove(),
-        },
+  const failures = [];
+  for (const room of rooms) {
+    try {
+      const players = await getAll(db.collection('players').where({ roomId: room._id }).orderBy('_id', 'asc'));
+      const last = await db.collection('rounds').where({ roomId: room._id })
+        .orderBy('createdAt', 'desc').limit(1).get();
+      const result = await db.runTransaction(async transaction => {
+        const ref = transaction.collection('rooms').doc(room._id);
+        const fresh = (await ref.get()).data;
+        if (!fresh || fresh.status !== 'active') return null;
+        // 心跳、加入、退出、计分均写同一 room 文档，事务冲突时重读，防止误关。
+        const reason = closeReason({ ...fresh, lastActivityAt: Math.max(fresh.lastActivityAt || 0,
+          last.data.length ? Number(last.data[0].createdAt) : 0) }, players, now);
+        if (!reason) return null;
+        // 上次扫描后新的房间心跳也应阻止使用过时的玩家列表关房。
+        if (Number(fresh.presenceAt || 0) > now - 90000) return null;
+        await ref.update({ data: { status: 'finished', closedAt: now, closedBy: reason,
+          qrCodeFileID: db.command.remove() } });
+        return { fileID: fresh.qrCodeFileID };
       });
-      // 异步清理云存储文件（best-effort，失败不影响关房）
-      cleanupRoomQRCode(qrCodeFileID).catch(err =>
-        console.error('QR cleanup background error:', err.message)
-      );
-      closed++;
+      if (result) {
+        closed++;
+        await cleanupRoomQRCode(result.fileID);
+      }
+    } catch (err) {
+      failures.push(room._id);
+      console.error('auto close failed:', room._id, err.message);
     }
   }
-
-  return {
-    code: 'OK',
-    data: {
-      scanned: roomsRes.data.length,
-      closed,
-      time: new Date(now).toISOString(),
-    },
-  };
+  return { code: failures.length ? 'PARTIAL_FAILURE' : 'OK',
+    data: { scanned: rooms.length, closed, failures, time: new Date(now).toISOString() } };
 };

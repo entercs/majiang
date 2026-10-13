@@ -27,6 +27,7 @@ Page({
   },
 
   onLoad(query) {
+    if (query.roomId && query.roomId !== roomStore.roomId) roomStore.reset();
     this._init(query.roomId);
   },
 
@@ -44,6 +45,7 @@ Page({
   },
 
   onUnload() {
+    this._unloaded = true;
     if (this._renderTimer) { clearInterval(this._renderTimer); this._renderTimer = null; }
     const syncWatcher = require('../../../stores/syncWatcher');
     syncWatcher.stop();
@@ -63,35 +65,19 @@ Page({
       wx.navigateBack({ delta: 1, fail: () => wx.reLaunch({ url: '/pages/home/index' }) });
       return;
     }
-    roomStore.roomId = roomId;
-
-    Promise.all([
-      roomService.getRoom(roomId),
-      playerService.getPlayers(roomId),
-    ]).then(([room, players]) => {
-      if (!room) throw { code: 'ROOM_NOT_FOUND', message: '房间不存在' };
-      const db = wx.cloud.database();
-      return db.collection('rules').doc(room.ruleId).get().then((ruleRes) => {
-        const rule = ruleRes.data;
-        const myPlayer = players.find(p =>
-          (p.openid && p.openid === appStore.openid) ||
-          (p.clientId && p.clientId === appStore.clientId)
-        ) || players[0]; // fallback: 暂时用第一个玩家
-        roomStore.setRoom({
-          roomId,
-          roomCode: room.roomCode,
-          rule,
-          players,
-          isOwner: !!myPlayer?.isOwner,
-          currentPlayerId: myPlayer?._id,
-          status: room.status,
-        });
-        // 捕获 QR code fileID（createRoom 时已写入；老房间可能为空）
-        this.setData({ shareQrCodeFileID: room.qrCodeFileID || '' });
-        this._startSync();
-        this._render();
-      });
-    }).catch(err => handleError(err, this));
+    this._unloaded = false;
+    roomService.getRoomSnapshot(roomId, { heartbeat: true }).then((snapshot) => {
+      if (this._unloaded) return;
+      const { room, players, rule, rounds, currentPlayerId } = snapshot;
+      const myPlayer = players.find(p => p._id === currentPlayerId);
+      if (!myPlayer) throw { code: 'NOT_IN_ROOM', message: '请重新加入房间' };
+      roomStore.setRoom({ roomId, roomCode: room.roomCode, rule, players,
+        isOwner: !!myPlayer.isOwner, currentPlayerId, status: room.status });
+      roomStore.setRounds(rounds);
+      this.setData({ shareQrCodeFileID: room.qrCodeFileID || '' });
+      this._startSync();
+      this._render();
+    }).catch(err => { if (!this._unloaded) handleError(err, this); });
   },
 
   _startSync() {
@@ -231,7 +217,7 @@ Page({
   onPopupConfirm(e) {
     const { value } = e.detail; // 正数：我给他加 value 分
     const target = this.data.popupTarget;
-    if (!target) return;
+    if (!target || this._submitting) return;
 
     const me = roomStore.players.find(p => p._id === roomStore.currentPlayerId);
     if (!me) {
@@ -239,8 +225,9 @@ Page({
       return;
     }
 
+    if (target._id === me._id) return;
     const num = Number(value);
-    if (!Number.isInteger(num) || num <= 0) {
+    if (!Number.isSafeInteger(num) || num <= 0) {
       // 静默关闭弹窗，不弹提示
       this.setData({ popupVisible: false });
       return;
@@ -251,6 +238,8 @@ Page({
       [me._id]: -num,
       [target._id]: num,
     };
+    this._submitting = true;
+    const submittedRoomId = roomStore.roomId;
     const clientId = 'manual_' + generateTempId();
     const tempRound = {
       _id: clientId,
@@ -269,9 +258,11 @@ Page({
     roundService.submitRound({
       roomId: roomStore.roomId,
       clientId,
+      playerId: me._id,
       type: 'manual',
       scoreChanges,
     }).then((res) => {
+      if (roomStore.roomId !== submittedRoomId || this._unloaded) return;
       if (res.code === 'OK') {
         // 原子替换 tempRound → realRound（避免中间状态）
         roomStore.replaceRound(clientId, res.data);
@@ -283,10 +274,11 @@ Page({
         handleError({ code: res.code, message: res.message }, this);
       }
     }).catch((err) => {
+      if (roomStore.roomId !== submittedRoomId || this._unloaded) return;
       roomStore.rounds = roomStore.rounds.filter(r => r._id !== clientId);
       this._render();
       handleError(err, this);
-    });
+    }).finally(() => { this._submitting = false; });
   },
 
   onPopupCancel() {
@@ -345,13 +337,16 @@ Page({
   },
 
   onTapBaseScore() {
+    if (!roomStore.isOwner) return;
     this.setData({ baseScorePopupVisible: true });
   },
 
   onBaseScoreConfirm(e) {
     const baseScore = e.detail.value;
-    const newRule = { ...roomStore.rule, baseScore };
-    this.setData({ baseScorePopupVisible: false, baseScore });
+    if (!roomStore.isOwner) return;
+    const { _id, roomId, createdAt, updatedAt, ...ruleFields } = roomStore.rule || {};
+    const newRule = { ...ruleFields, baseScore };
+    this.setData({ baseScorePopupVisible: false });
     roomService.updateRule({ roomId: roomStore.roomId, rule: newRule })
       .then((r) => {
         if (r.code === 'OK') {
@@ -402,7 +397,7 @@ Page({
             appStore.setNickname(name);
             this._render();
             wx.showToast({ title: '已保存', icon: 'success', duration: 1200 });
-          });
+          }).catch(err => handleError(err, this));
         }
       },
     });
@@ -447,7 +442,7 @@ Page({
       this.setData({ selfPopupVisible: false });
       this._render();
       wx.showToast({ title: '已保存', icon: 'success', duration: 1200 });
-    });
+    }).catch(err => handleError(err, this));
   },
 
 });
