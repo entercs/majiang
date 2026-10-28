@@ -487,7 +487,7 @@ Page({
       wx.hideLoading();
       if (res.code === 'OK') {
         if (roomStore.roomId !== submittedRoomId) return;
-        roomStore.replaceRound(clientId, res.data);
+        roomStore.acceptRound(clientId, res);
         wx.showToast({ title: '已应用', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 600);
       } else {

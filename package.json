@@ -6,6 +6,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "benchmark:sync": "node scripts/benchmark-sync.js",
     "prepare:cloud": "node scripts/prepare-cloudfunctions.js",
     "check:banned": "node scripts/check-banned-words.js"
   },

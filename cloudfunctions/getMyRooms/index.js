@@ -1,34 +1,39 @@
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-// 文档不存在时返回 null，支持事务中的首次创建与旧记录兼容。
 const db = cloud.database({ throwOnNotFound: false });
-const { getAll, ownsPlayer, isOnline } = require('./_shared/roomLifecycle');
-
-exports.main = async (event) => {
+const { getAll, ownsPlayer, isOnline, ONLINE_TTL_MS } = require('./_shared/roomLifecycle');
+exports.main = async event => {
   const { OPENID: openid } = cloud.getWXContext();
   const { clientId } = event;
   if (!openid || !clientId) return { code: 'INVALID_INPUT', message: '身份缺失' };
-  const candidates = await getAll(db.collection('players')
-    .where(db.command.or([{ openid }, { clientId }])).orderBy('_id', 'asc'));
   const latest = new Map();
-  for (const p of candidates.filter(p => ownsPlayer(p, openid, clientId))) {
-    if (!latest.has(p.roomId) || (p.joinedAt || 0) > (latest.get(p.roomId).joinedAt || 0)) latest.set(p.roomId, p);
+  const query = db.collection('players').where(db.command.or([{ openid }, { clientId }]))
+    .orderBy('joinedAt', 'desc').orderBy('_id', 'asc');
+  for (let offset = 0; latest.size < 10; offset += 20) {
+    const page = (await query.skip(offset).limit(20).get()).data;
+    for (const p of page) {
+      if (ownsPlayer(p, openid, clientId) && !latest.has(p.roomId)) latest.set(p.roomId, p);
+      if (latest.size === 10) break;
+    }
+    if (page.length < 20) break;
   }
-  const recent = [...latest.values()].sort((a, b) => (b.joinedAt || 0) - (a.joinedAt || 0));
-  const active = [], finished = [];
+  if (!latest.size) return { code: 'OK', data: { active: [], finished: [] } };
+  const rooms = (await db.collection('rooms').where({ _id: db.command.in([...latest.keys()]) }).limit(10).get()).data;
+  const activeIds = rooms.filter(r => r.status === 'active').map(r => r._id);
   const now = Date.now();
-  // 先选最近十场，历史不删除；缺失房间不占展示名额。
-  for (const mine of recent) {
-    const found = await db.collection('rooms').where({ _id: mine.roomId }).limit(1).get();
-    if (!found.data.length) continue;
-    const room = found.data[0];
-    const online = await db.collection('players').where({ roomId: room._id,
-      isOnline: true, lastSeenAt: db.command.gt(now - 90000) }).count();
-    const item = { roomId: room._id, roomCode: room.roomCode, onlineCount: online.total,
-      isOnline: isOnline(mine, now), joinedAt: mine.joinedAt,
+  const online = activeIds.length ? await getAll(db.collection('players').where({
+    roomId: db.command.in(activeIds), isOnline: true, lastSeenAt: db.command.gt(now - ONLINE_TTL_MS),
+  }).orderBy('_id', 'asc')) : [];
+  const counts = {};
+  for (const p of online) counts[p.roomId] = (counts[p.roomId] || 0) + 1;
+  const active = [], finished = [];
+  for (const mine of latest.values()) {
+    const room = rooms.find(r => r._id === mine.roomId);
+    if (!room) continue;
+    const item = { roomId: room._id, roomCode: room.roomCode, onlineCount: counts[room._id] || 0,
+      isOnline: room.status === 'active' && isOnline(mine, now), joinedAt: mine.joinedAt,
       closedAt: room.closedAt || null, closedBy: room.closedBy || null };
     (room.status === 'active' ? active : finished).push(item);
-    if (active.length + finished.length >= 10) break;
   }
   return { code: 'OK', data: { active, finished } };
 };

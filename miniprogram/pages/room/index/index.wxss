@@ -340,6 +340,7 @@
   margin-bottom: 32rpx;
 }
 .share-popup-qrcode {
+  position: relative;
   width: 400rpx;
   height: 400rpx;
   background: #F5F5F5;
@@ -429,3 +430,14 @@
   margin-top: 4rpx;
   text-align: right;
 }
+
+.qrcode-pending { opacity: 0; }
+.qrcode-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F5F5F5;
+}
+.qrcode-failed.qrcode-overlay { flex-direction: column; }

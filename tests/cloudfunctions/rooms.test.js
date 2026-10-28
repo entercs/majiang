@@ -80,6 +80,7 @@ test('在线心跳超过 30 分钟仍保护房间，陈旧在线标记按无人�
   await db.collection('rounds').doc('old-0').update({ data: { createdAt: old } });
   expect((await load('autoCloseTimeout')()).data.closed).toBe(0);
   for (const id of ['a', 'b']) await db.collection('players').doc(id).update({ data: { lastSeenAt: old } });
+  await db.collection('rooms').doc('r').update({ data: { nextCheckAt: 0 } });
   expect((await load('autoCloseTimeout')()).data.closed).toBe(1);
   expect(mockCloud.rows('rooms')[0].status).toBe('finished');
   expect(mockCloud.rows('players')).toHaveLength(2);
@@ -87,12 +88,16 @@ test('在线心跳超过 30 分钟仍保护房间，陈旧在线标记按无人�
   expect((await load('settleRound')(pay())).code).toBe('ROOM_FINISHED');
 });
 
-test('扫描超过 100 间房而不截断', async () => {
+test('超过100间房分批清理，下一轮继续处理剩余房间', async () => {
   jest.resetModules();
   const old = Date.now() - 3600000;
   mockCloud = makeCloud({ rooms: Array.from({ length: 121 }, (_, i) => ({ _id: 'r' + i,
     status: 'active', createdAt: old })), players: [], rounds: [] });
-  expect((await require('../../cloudfunctions/autoCloseTimeout/index').main()).data.closed).toBe(121);
+  const main = require('../../cloudfunctions/autoCloseTimeout/index').main;
+  const first = await main();
+  expect(first.data.closed).toBe(100);
+  expect(first.data.more).toBe(true);
+  expect((await main()).data.closed).toBe(21);
 });
 
 test('重复加入不生成新玩家，重入和退出不删除历史记录', async () => {
@@ -217,4 +222,210 @@ test('SDK 默认读取缺失文档抛错，显式关闭后事务可以首次创�
     await tx.collection('rooms').doc('new').set({ data: { status: 'active' } });
   });
   expect(cloud.rows('rooms')).toEqual([{ _id: 'new', status: 'active' }]);
+});
+
+test('新协议返回完整总分摘要、限定初始明细；静默同步不扫描历史和规则', async () => {
+  const load = setup(501);
+  const main = load('getRoomSnapshot');
+  const first = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a' });
+  expect(first.data.scoreTotals).toEqual({ a: -501, b: 501 });
+  expect(first.data.rounds).toHaveLength(100);
+  expect(first.data.historyComplete).toBe(false);
+  mockCloud.calls.length = 0;
+  const quiet = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a',
+    sinceRoundIndex: 501, knownRevision: 0 });
+  expect(quiet.data.rounds).toEqual([]);
+  expect(quiet.data.scoreTotals.a).toBe(-501);
+  expect(mockCloud.calls.filter(c => c.collection === 'rounds' || c.collection === 'rules')).toEqual([]);
+});
+
+test('增量分页固定上界，整百条不多请求空页，期间新增在下次补齐', async () => {
+  const load = setup(201);
+  const main = load('getRoomSnapshot');
+  const first = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', sinceRoundIndex: 0 });
+  expect(first.data.rounds).toHaveLength(100);
+  expect(first.data.nextOffset).toBe(100);
+  await load('settleRound')(pay('new'));
+  const second = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', sinceRoundIndex: 0,
+    offset: 100, throughRoundIndex: 200 });
+  expect(second.data.rounds).toHaveLength(100);
+  expect(second.data.nextOffset).toBeNull();
+  const delta = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', sinceRoundIndex: 201 });
+  expect(delta.data.rounds.map(r => r.roundIndex)).toEqual([202]);
+  expect(delta.data.scoreTotals).toEqual({ a: -206, b: 206 });
+});
+
+test('lookup 仅确认原操作，不创建账目，重复提交不重复累加总分', async () => {
+  const load = setup(5);
+  const settle = load('settleRound');
+  expect((await settle({ ...pay('x'), action: 'lookup', type: undefined })).data).toBeNull();
+  expect(mockCloud.rows('rounds')).toHaveLength(5);
+  const first = await settle(pay('x'));
+  const lookup = await settle({ ...pay('x'), action: 'lookup', type: undefined });
+  expect(lookup.data._id).toBe(first.data._id);
+  await settle(pay('x'));
+  expect(mockCloud.rows('rooms')[0].scoreTotals).toEqual({ a: -10, b: 10 });
+  expect(mockCloud.rows('rounds')).toHaveLength(6);
+});
+
+test('总分与记分事务一起回滚，累计超出安全整数时不写账', async () => {
+  const load = setup();
+  const db = mockCloud.database({ throwOnNotFound: false });
+  await db.collection('rooms').doc('r').update({ data: { ledgerSchema: 1, totalsThroughIndex: 0, roundCount: 0,
+    scoreTotals: { a: -Number.MAX_SAFE_INTEGER, b: Number.MAX_SAFE_INTEGER } } });
+  expect((await load('settleRound')(pay())).code).toBe('INVALID_INPUT');
+  expect(mockCloud.rows('rounds')).toHaveLength(0);
+});
+
+test('通知只对业务变化发布，心跳不触发通知；各成员通知仅包含自身身份', async () => {
+  process.env.ROOM_SYNC_MODE = 'watch';
+  try {
+    const load = setup();
+    const main = load('getRoomSnapshot');
+    const state = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', subscribe: true, heartbeat: true });
+    expect(state.data.sync.mode).toBe('watch');
+    expect(mockCloud.rows('roomFeeds')[0]._openid).toBe('wx-a');
+    const before = mockCloud.calls.filter(c => c.collection === 'roomFeeds' && c.method === 'set').length;
+    await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', heartbeat: true,
+      sinceRoundIndex: 0, knownRevision: 0 });
+    expect(mockCloud.calls.filter(c => c.collection === 'roomFeeds' && c.method === 'set')).toHaveLength(before);
+    await load('settleRound')(pay());
+    const feeds = mockCloud.rows('roomFeeds');
+    expect(feeds).toHaveLength(2);
+    expect(feeds.every(f => f.revision === 1)).toBe(true);
+    expect(feeds.map(f => f._openid).sort()).toEqual(['wx-a', 'wx-b']);
+  } finally { delete process.env.ROOM_SYNC_MODE; }
+});
+
+test('旧房间成员通过心跳绑定身份后也能收到后续通知', async () => {
+  process.env.ROOM_SYNC_MODE = 'watch';
+  try {
+    const load = setup();
+    const db = mockCloud.database({ throwOnNotFound: false });
+    await db.collection('players').doc('b').update({ data: { openid: null } });
+    const state = load('getRoomSnapshot');
+    await state({ protocol: 2, roomId: 'r', memberClientId: 'device-a', heartbeat: true, subscribe: true });
+    mockCloud.setOpenid('wx-b');
+    await state({ protocol: 2, roomId: 'r', memberClientId: 'device-b', heartbeat: true, subscribe: true });
+    mockCloud.setOpenid('wx-a');
+    await load('settleRound')(pay());
+    expect(mockCloud.rows('roomFeeds').find(f => f._id === 'b').revision).toBe(1);
+  } finally { delete process.env.ROOM_SYNC_MODE; }
+});
+
+test('开房限频按真实账号，不能通过更换设备编号绕过', async () => {
+  const create = setup()('createRoom');
+  expect((await create({ clientId: 'first', avatarIndex: 0 })).code).toBe('OK');
+  expect((await create({ clientId: 'second', avatarIndex: 0 })).code).toBe('RATE_LIMIT');
+});
+
+test('首页十场批量读取，已结束房间不查询在线人数', async () => {
+  const load = setup();
+  const db = mockCloud.database({ throwOnNotFound: false });
+  for (let i = 0; i < 10; i++) {
+    await db.collection('players').doc('mine-' + i).set({ data: { roomId: 'room-' + i,
+      openid: 'wx-a', clientId: 'device-a', joinedAt: Date.now() + i + 1 } });
+    await db.collection('rooms').doc('room-' + i).set({ data: { roomCode: String(i), status: 'finished' } });
+  }
+  mockCloud.calls.length = 0;
+  const result = await load('getMyRooms')({ clientId: 'device-a' });
+  expect(result.data.finished).toHaveLength(10);
+  expect(mockCloud.calls.filter(c => c.method === 'query')).toHaveLength(2);
+});
+
+test('旧版本写入导致摘要序号落后时自动重建，不漏算已成功的账目', async () => {
+  const load = setup(5);
+  const main = load('getRoomSnapshot');
+  await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a' });
+  const db = mockCloud.database({ throwOnNotFound: false });
+  await db.collection('rounds').doc('old-inflight').set({ data: { roomId: 'r', roundIndex: 6,
+    scoreChanges: { a: -2, b: 2 }, createdBy: 'a', createdAt: Date.now() } });
+  await db.collection('rooms').doc('r').update({ data: { roundCount: 6 } });
+  const state = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', sinceRoundIndex: 5 });
+  expect(state.data.scoreTotals).toEqual({ a: -7, b: 7 });
+  expect(state.data.rounds.map(r => r._id)).toEqual(['old-inflight']);
+  expect(mockCloud.rows('rooms')[0].totalsThroughIndex).toBe(6);
+});
+
+test('最终排行榜只读总分摘要，不读取历史与规则', async () => {
+  const load = setup(501);
+  const main = load('getRoomSnapshot');
+  await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a' });
+  mockCloud.calls.length = 0;
+  const state = await main({ protocol: 2, roomId: 'r', memberClientId: 'device-a', summaryOnly: true });
+  expect(state.data.scoreTotals.a).toBe(-501);
+  expect(state.data.rounds).toEqual([]);
+  expect(mockCloud.calls.filter(c => ['rounds', 'rules'].includes(c.collection))).toHaveLength(0);
+});
+
+test('定时清理不扫描尚未到检查时间的房间明细', async () => {
+  const load = setup();
+  await mockCloud.database({ throwOnNotFound: false }).collection('rooms').doc('r')
+    .update({ data: { nextCheckAt: Date.now() + 3600000 } });
+  mockCloud.calls.length = 0;
+  const result = await load('autoCloseTimeout')();
+  expect(result.data.scanned).toBe(0);
+  expect(mockCloud.calls.every(c => c.collection === 'rooms' && c.method === 'query')).toBe(true);
+});
+
+test('同步参数非法值安全回退，校准周期不超过心跳周期', () => {
+  const { policy } = require('../../cloudfunctions/_shared/roomSync');
+  try {
+    process.env.ROOM_POLL_MS = '0'; process.env.ROOM_HEARTBEAT_MS = '15000'; process.env.ROOM_RECONCILE_MS = '60000';
+    expect(policy()).toMatchObject({ pollMs: 5000, heartbeatMs: 15000, reconcileMs: 15000 });
+    process.env.ROOM_POLL_MS = '5000';
+    expect(policy().pollMs).toBe(5000);
+    process.env.ROOM_POLL_MS = '60000';
+    expect(policy().pollMs).toBe(5000);
+    process.env.ROOM_POLL_MS = '1000';
+    expect(policy().pollMs).toBe(1000);
+  } finally {
+    delete process.env.ROOM_POLL_MS; delete process.env.ROOM_HEARTBEAT_MS; delete process.env.ROOM_RECONCILE_MS;
+  }
+});
+
+test('watch 默认六十秒心跳和校准，poll 保留三十秒心跳，过长配置安全回退', () => {
+  const { policy, CHECK_DELAY_MS } = require('../../cloudfunctions/_shared/roomSync');
+  const names = ['ROOM_SYNC_MODE', 'ROOM_HEARTBEAT_MS', 'ROOM_RECONCILE_MS'];
+  const saved = names.map(name => process.env[name]);
+  try {
+    names.forEach(name => delete process.env[name]);
+    expect(policy()).toMatchObject({ mode: 'poll', pollMs: 5000, heartbeatMs: 30000, reconcileMs: 30000 });
+    process.env.ROOM_SYNC_MODE = 'watch';
+    expect(policy()).toMatchObject({ mode: 'watch', heartbeatMs: 60000, reconcileMs: 60000 });
+    process.env.ROOM_HEARTBEAT_MS = '60000';
+    expect(policy().heartbeatMs).toBe(60000);
+    process.env.ROOM_HEARTBEAT_MS = '600000';
+    process.env.ROOM_RECONCILE_MS = '600000';
+    expect(policy()).toMatchObject({ heartbeatMs: 60000, reconcileMs: 60000 });
+    expect(CHECK_DELAY_MS).toBe(480000);
+  } finally {
+    names.forEach((name, index) => {
+      if (saved[index] == null) delete process.env[name]; else process.env[name] = saved[index];
+    });
+  }
+});
+
+test('一分钟心跳保留三分钟在线容错，首页与房间一致，失联后仍按期归档', async () => {
+  const now = 1800000000000;
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
+  try {
+    const load = setup();
+    const db = mockCloud.database({ throwOnNotFound: false });
+    for (const id of ['a', 'b']) {
+      await db.collection('players').doc(id).update({ data: { lastSeenAt: now - 120000 } });
+    }
+    const home = await load('getMyRooms')({ clientId: 'device-a' });
+    expect(home.data.active[0]).toMatchObject({ onlineCount: 2, isOnline: true });
+    const state = await load('getRoomSnapshot')({ roomId: 'r', memberClientId: 'device-a' });
+    expect(state.data.players.every(p => p.isOnline)).toBe(true);
+    const { isOnline, closeReason } = require('../../cloudfunctions/_shared/roomLifecycle');
+    const player = { isOnline: true, lastSeenAt: now };
+    expect(isOnline(player, now + 179999)).toBe(true);
+    expect(isOnline(player, now + 180000)).toBe(false);
+    const room = { status: 'active', createdAt: now, presenceAt: now };
+    expect(closeReason(room, [player], now + 479999)).toBeNull();
+    expect(closeReason(room, [player], now + 480000)).toBe('auto-empty');
+    expect(closeReason({ ...room, emptyAt: now }, [{ ...player, isOnline: false }], now + 300000)).toBe('auto-empty');
+  } finally { clock.mockRestore(); }
 });

@@ -1,9 +1,8 @@
-const app = getApp();
 const appStore = require('../../stores/appStore');
 const roomService = require('../../services/roomService');
 const { handleError } = require('../../services/errorHandler');
 const roomStore = require('../../stores/roomStore');
-const { AVATAR_NAMES } = require('../../utils/constants');
+const qrCodeService = require('../../services/qrCodeService');
 
 const MY_ROOMS_CACHE_KEY = 'myRooms';
 const MY_ROOMS_CACHE_TTL = 5 * 60 * 1000; // 5 min
@@ -48,7 +47,7 @@ function _ensureNickname() {
 }
 
 Page({
-  data: { loaded: true, myRooms: { active: [], finished: [] }, nickname: '', baseScorePopupVisible: false, pendingNickname: '' },
+  data: { loaded: true, myRooms: { active: [], finished: [] }, nickname: '' },
 
   onLoad(options) {
     appStore.init();
@@ -63,6 +62,7 @@ Page({
   },
 
   onShow() {
+    this._homeVisible = true;
     this._roomsLoaded = false;
     this.setData({ myRooms: { active: [], finished: [] } });
     // 小程序从后台被扫码唤醒时，app.onShow 也会更新 pendingJoinCode，这里补消费
@@ -72,8 +72,8 @@ Page({
     this._roomsTimer = setInterval(() => this._renderMyRooms(), 30000);
   },
 
-  onHide() { clearInterval(this._roomsTimer); },
-  onUnload() { clearInterval(this._roomsTimer); },
+  onHide() { this._homeVisible = false; clearInterval(this._roomsTimer); },
+  onUnload() { this._homeVisible = false; clearInterval(this._roomsTimer); },
 
   _consumePendingJoinCode(options) {
     // 1. 分享卡片路径（onLoad 拿得到 joinCode）
@@ -115,14 +115,16 @@ Page({
   },
 
   _renderMyRooms() {
+    if (this._roomsRequest) return;
     // 1. 先用缓存立即渲染
     const cached = _loadMyRoomsCache();
     if (cached && !this._roomsLoaded) {
       this.setData({ myRooms: _decorateMyRooms(cached) });
     }
     // 2. 异步刷新
-    roomService.getMyRooms({ clientId: appStore.clientId })
+    this._roomsRequest = roomService.getMyRooms({ clientId: appStore.clientId })
       .then((res) => {
+        if (!this._homeVisible) return;
         if (res.code === 'OK') {
           this._roomsLoaded = true;
           _saveMyRoomsCache(res.data);
@@ -131,18 +133,19 @@ Page({
           handleError(res, this);
         }
       })
-      .catch((err) => handleError(err, this));
+      .catch((err) => { if (this._homeVisible) handleError(err, this); })
+      .finally(() => { this._roomsRequest = null; });
   },
 
   onCreateRoom() {
     const nickname = _ensureNickname();
-    this.setData({ nickname, pendingNickname: nickname, baseScorePopupVisible: true });
+    this.setData({ nickname });
+    this._doCreateRoom(nickname);
   },
 
-  _doCreateRoom(nickname, baseScore) {
+  _doCreateRoom(nickname, baseScore = 1) {
     if (this._creating) return;
     this._creating = true;
-    console.log('【home _doCreateRoom】nickname:', nickname, '!nickname:', !nickname, 'appStore.nickname:', appStore.nickname, 'pendingNickname:', this.data.pendingNickname);
     wx.showLoading({ title: '创建中...' });
     roomService.createRoom({
       nickname,
@@ -151,9 +154,11 @@ Page({
       baseScore,
       // 有自定义昵称 → 手动模式（需同步）；没有 → 自动模式（随机分配）
       nicknameAuto: !nickname,
-    }).then((res) => {
-      wx.hideLoading();
+    }).then(async (res) => {
       if (res.code === 'OK') {
+        const fileID = res.data.qrCodeFileID || '';
+        const src = await qrCodeService.prepare(fileID);
+        wx.hideLoading();
         roomStore.setRoom({
           roomId: res.data.roomId,
           roomCode: res.data.roomCode,
@@ -162,25 +167,16 @@ Page({
           isOwner: true,
           currentPlayerId: res.data.playerId,
         });
-        wx.reLaunch({ url: '/pages/room/index/index' });
+        roomStore.createdInvite = { roomId: res.data.roomId, fileID, src };
+        wx.reLaunch({ url: `/pages/room/index/index?roomId=${res.data.roomId}&invite=1` });
       } else {
+        wx.hideLoading();
         handleError({ code: res.code, message: res.message }, this);
       }
     }).catch((err) => {
       wx.hideLoading();
       handleError(err, this);
     }).finally(() => { this._creating = false; });
-  },
-
-  onBaseScoreConfirm(e) {
-    console.log('【onBaseScoreConfirm】pendingNickname:', this.data.pendingNickname);
-    const baseScore = e.detail.value;
-    this.setData({ baseScorePopupVisible: false });
-    this._doCreateRoom(this.data.pendingNickname, baseScore);
-  },
-
-  onBaseScoreCancel() {
-    this.setData({ baseScorePopupVisible: false });
   },
 
   onJoinRoom() {

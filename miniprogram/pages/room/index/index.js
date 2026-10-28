@@ -4,6 +4,7 @@ const roomService = require('../../../services/roomService');
 const playerService = require('../../../services/playerService');
 const roundService = require('../../../services/roundService');
 const { handleError } = require('../../../services/errorHandler');
+const qrCodeService = require('../../../services/qrCodeService');
 const { generateTempId } = require('../../../utils/cloud-id');
 
 Page({
@@ -17,17 +18,29 @@ Page({
     baseScorePopupVisible: false,
     syncStatus: 'connecting',
     syncText: '同步中...',
+    scorePending: false,
     popupVisible: false,
     popupTarget: null,
     selfPopupVisible: false,
     selfPopupTarget: null,
     sharePopupVisible: false,
     shareQrCodeFileID: '',
+    shareQrCodeSrc: '',
+    shareQrCodeReady: false,
     shareQrCodeLoading: false,
   },
 
-  onLoad(query) {
+  onLoad(query = {}) {
+    this._openInviteOnLoad = query.invite === '1';
     if (query.roomId && query.roomId !== roomStore.roomId) roomStore.reset();
+    const invite = roomStore.createdInvite;
+    if (this._openInviteOnLoad && invite && invite.roomId === (query.roomId || roomStore.roomId)) {
+      this._openInviteOnLoad = false;
+      roomStore.createdInvite = null;
+      this.setData({ shareQrCodeFileID: invite.fileID, shareQrCodeSrc: invite.src || '',
+        shareQrCodeReady: false, shareQrCodeLoading: true });
+      this.onOpenSharePopup();
+    }
     this._init(query.roomId);
   },
 
@@ -46,6 +59,7 @@ Page({
 
   onUnload() {
     this._unloaded = true;
+    this.onCloseSharePopup();
     if (this._renderTimer) { clearInterval(this._renderTimer); this._renderTimer = null; }
     const syncWatcher = require('../../../stores/syncWatcher');
     syncWatcher.stop();
@@ -66,7 +80,7 @@ Page({
       return;
     }
     this._unloaded = false;
-    roomService.getRoomSnapshot(roomId, { heartbeat: true }).then((snapshot) => {
+    roomService.getRoomState(roomId, { heartbeat: true, subscribe: true }).then((snapshot) => {
       if (this._unloaded) return;
       const { room, players, rule, rounds, currentPlayerId } = snapshot;
       const myPlayer = players.find(p => p._id === currentPlayerId);
@@ -74,9 +88,17 @@ Page({
       roomStore.setRoom({ roomId, roomCode: room.roomCode, rule, players,
         isOwner: !!myPlayer.isOwner, currentPlayerId, status: room.status });
       roomStore.setRounds(rounds);
-      this.setData({ shareQrCodeFileID: room.qrCodeFileID || '' });
+      roomStore.setServerTotals(snapshot.scoreTotals, snapshot.totalsThrough);
+      roomStore.syncCursor = snapshot.throughRoundIndex;
+      roomStore.revision = snapshot.revision;
+      roomStore.historyComplete = snapshot.protocol !== 2 || !!snapshot.historyComplete;
+      if (!this.data.shareQrCodeFileID) this.setData({ shareQrCodeFileID: room.qrCodeFileID || '' });
+      this._initialSnapshot = snapshot;
       this._startSync();
       this._render();
+      const openInvite = this._openInviteOnLoad;
+      this._openInviteOnLoad = false;
+      if (openInvite && room.status === 'active') this.onOpenSharePopup();
     }).catch(err => { if (!this._unloaded) handleError(err, this); });
   },
 
@@ -84,7 +106,8 @@ Page({
     const syncWatcher = require('../../../stores/syncWatcher');
     syncWatcher.start(roomStore.roomId, {
       onSyncStatus: (status) => {
-        const text = status === 'connected' ? '' : status === 'connecting' ? '同步中...' : '正在重连...';
+        const text = status === 'connected' ? '' : status === 'connecting' ? '同步中...'
+          : status === 'unavailable' ? '无法同步，请退出后重新加入' : '正在重连...';
         this.setData({ syncStatus: status, syncText: text });
       },
       onPlayersChange: (players) => { roomStore.setPlayers(players); this._render(); },
@@ -98,7 +121,8 @@ Page({
           success: () => wx.redirectTo({ url: '/pages/room/summary/index' }),
         });
       },
-    });
+    }, this._initialSnapshot);
+    this._initialSnapshot = null;
   },
 
   _render() {
@@ -139,6 +163,7 @@ Page({
       isOwner: roomStore.isOwner,
       currentPlayerId: roomStore.currentPlayerId,
       baseScore: roomStore.rule?.baseScore ?? 1,
+      scorePending: roundService.hasPending ? roundService.hasPending(roomStore.roomId) : false,
     });
   },
 
@@ -146,49 +171,64 @@ Page({
     wx.setClipboardData({ data: this.data.roomCode });
   },
 
-  // === 分享二维码弹窗 ===
+  // === 邀请二维码弹窗 ===
   onOpenSharePopup() {
-    this.setData({ sharePopupVisible: true });
-    if (this.data.shareQrCodeFileID) return;  // 秒开路径：fileID 已知
-    this._loadQRCode();  // fallback：老房间懒生成
+    this._inviteEpoch = (this._inviteEpoch || 0) + 1;
+    this._qrRetries = 0;
+    this.setData({ sharePopupVisible: true, shareQrCodeLoading: true });
+    this._loadQRCode();
   },
 
   _loadQRCode() {
+    const epoch = this._inviteEpoch;
+    if (this._qrRequest && this._qrRequest.epoch === epoch) return this._qrRequest.promise;
     const roomCode = roomStore.roomCode;
-    if (!roomCode) return;
+    if (!roomCode) return Promise.resolve();
+    const valid = () => !this._unloaded && this.data.sharePopupVisible && epoch === this._inviteEpoch;
+    this.setData({ shareQrCodeLoading: true, shareQrCodeReady: false });
+    const promise = (async () => {
+      let fileID = this.data.shareQrCodeFileID;
+      if (!fileID) fileID = (await roomService.getRoomQRCode({ roomCode })).data.fileID;
+      const src = await qrCodeService.preload(fileID);
+      if (!valid()) return;
+      this.setData({ shareQrCodeFileID: fileID, shareQrCodeSrc: src, shareQrCodeLoading: true });
+    })().catch(() => { if (valid()) this._retryQRImage(); })
+      .finally(() => { if (this._qrRequest && this._qrRequest.epoch === epoch) this._qrRequest = null; });
+    this._qrRequest = { epoch, promise };
+    return promise;
+  },
+
+  _retryQRImage() {
+    if (!this.data.sharePopupVisible || this._unloaded) return;
+    qrCodeService.invalidate(this.data.shareQrCodeFileID);
+    this.setData({ shareQrCodeSrc: '', shareQrCodeReady: false });
+    if ((this._qrRetries || 0) >= 1) {
+      this.setData({ shareQrCodeLoading: false });
+      return;
+    }
+    this._qrRetries = (this._qrRetries || 0) + 1;
     this.setData({ shareQrCodeLoading: true });
-    roomService.getRoomQRCode({ roomCode })
-      .then((res) => {
-        if (res.code === 'OK' && res.data && res.data.fileID) {
-          this.setData({
-            shareQrCodeFileID: res.data.fileID,
-            shareQrCodeLoading: false,
-          });
-        } else {
-          this.setData({ shareQrCodeLoading: false });
-        }
-      })
-      .catch((err) => {
-        console.error('getRoomQRCode error:', err);
-        this.setData({ shareQrCodeLoading: false });
-        handleError(err, this);
-      });
+    clearTimeout(this._qrRetryTimer);
+    this._qrRetryTimer = setTimeout(() => this._loadQRCode(), 1000);
+  },
+
+  onQrCodeLoaded() {
+    if (this.data.sharePopupVisible) this.setData({ shareQrCodeReady: true, shareQrCodeLoading: false });
   },
 
   onRetryQRCode() {
-    this.setData({ shareQrCodeLoading: true });
-    this._loadQRCode();
+    clearTimeout(this._qrRetryTimer);
+    this._qrRetries = 0;
+    return this._loadQRCode();
   },
 
   onCloseSharePopup() {
-    this.setData({ sharePopupVisible: false });
+    this._inviteEpoch = (this._inviteEpoch || 0) + 1;
+    clearTimeout(this._qrRetryTimer);
+    this.setData({ sharePopupVisible: false, shareQrCodeLoading: false });
   },
 
-  onQrCodeImageError() {
-    console.warn('QR code image failed to load, fallback to retry');
-    this.setData({ shareQrCodeFileID: '', shareQrCodeLoading: false });
-    this._loadQRCode();
-  },
+  onQrCodeImageError() { this._retryQRImage(); },
 
   noop() {},
 
@@ -265,7 +305,7 @@ Page({
       if (roomStore.roomId !== submittedRoomId || this._unloaded) return;
       if (res.code === 'OK') {
         // 原子替换 tempRound → realRound（避免中间状态）
-        roomStore.replaceRound(clientId, res.data);
+        roomStore.acceptRound(clientId, res);
         this._render();
         wx.showToast({ title: '给分成功', icon: 'success', duration: 1200 });
       } else {
@@ -280,6 +320,19 @@ Page({
       this._render();
       handleError(err, this);
     }).finally(() => { this._submitting = false; });
+  },
+
+  async onReconcileScore() {
+    if (this._checkingScore) return;
+    this._checkingScore = true;
+    const roomId = roomStore.roomId;
+    try {
+      const results = await roundService.reconcilePending(roomId, true);
+      if (this._unloaded || roomStore.roomId !== roomId) return;
+      for (const result of results) roomStore.acceptRound(result.data.clientId, result);
+      this._render();
+      wx.showToast({ title: roundService.hasPending(roomId) ? '暂未确认，请稍后重试' : '核对完成', icon: 'none' });
+    } finally { this._checkingScore = false; }
   },
 
   onPopupCancel() {

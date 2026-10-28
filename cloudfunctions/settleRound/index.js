@@ -5,6 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database({ throwOnNotFound: false });
 const { calculateRound } = require('./_shared/scoreService');
 const { ownsPlayer, getAll } = require('./_shared/roomLifecycle');
+const { ensureLedger, changeRoom, subscribers, CHECK_DELAY_MS } = require('./_shared/roomSync');
 
 function invalid(message) { return { code: 'INVALID_INPUT', message }; }
 
@@ -13,23 +14,27 @@ exports.main = async (event) => {
   // clientId 是本次操作的幂等键，memberClientId 才是旧设备身份。
   const { roomId, clientId, memberClientId, playerId, type, scoreChanges, input } = event;
   if (!openid || typeof roomId !== 'string' || !roomId || typeof clientId !== 'string' ||
-      !clientId || clientId.length > 128 || !['manual', 'auto'].includes(type)) {
+      !clientId || clientId.length > 128 || (event.action !== 'lookup' && !['manual', 'auto'].includes(type))) {
     return invalid('房间、操作编号或计分类型无效');
   }
   const players = await getAll(db.collection('players').where({ roomId }).orderBy('_id', 'asc'));
   const caller = players.find(p => (!playerId || p._id === playerId) && ownsPlayer(p, openid, memberClientId));
   if (!caller) return { code: 'FORBIDDEN', message: '只能以自己的身份记分，请重新加入房间' };
-  // 兼容旧版本随机 _id 的已提交记录。
-  const existing = await db.collection('rounds').where({ roomId, clientId }).limit(1).get();
-  if (existing.data.length) {
-    return existing.data[0].createdBy === caller._id
-      ? { code: 'OK', data: existing.data[0] }
-      : { code: 'FORBIDDEN', message: '操作编号已被其他玩家使用' };
-  }
-  // 旧房间首次迁移时用已有最大序号作为种子；并发后由房间事务计数器分配。
-  const last = await db.collection('rounds').where({ roomId }).orderBy('roundIndex', 'desc').limit(1).get();
-  const seed = last.data.length ? last.data[0].roundIndex : 0;
   const roundId = createHash('sha256').update(JSON.stringify([roomId, clientId])).digest('hex').slice(0, 32);
+  const savedRound = (await db.collection('rounds').doc(roundId).get()).data;
+  let existing = savedRound;
+  // lookup 只查询结果，不创建账目。兼容旧随机 ID 的历史操作。
+  if (!existing && (event.action === 'lookup' || !roomId.startsWith('room_'))) {
+    const old = await db.collection('rounds').where({ roomId, clientId }).limit(1).get();
+    existing = old.data[0];
+  }
+  if (existing) return existing.createdBy === caller._id
+    ? { code: 'OK', data: existing }
+    : { code: 'FORBIDDEN', message: '操作编号已被其他玩家使用' };
+  if (event.action === 'lookup') return { code: 'OK', data: null };
+  const initialRoom = (await db.collection('rooms').doc(roomId).get()).data;
+  if (!initialRoom) return { code: 'ROOM_NOT_FOUND', message: '房间不存在' };
+  await ensureLedger(db, initialRoom);
   return db.runTransaction(async transaction => {
     const roomRef = transaction.collection('rooms').doc(roomId);
     const room = (await roomRef.get()).data;
@@ -73,12 +78,20 @@ exports.main = async (event) => {
     }
     if (sum !== 0 || !(changes[caller._id] < 0)) return invalid('分数必须守恒，且由给分者提交');
     const now = Date.now();
-    const roundDoc = { roomId, roundIndex: Math.max(room.roundCount || 0, seed) + 1,
+    const roundDoc = { roomId, roundIndex: room.roundCount + 1,
       type, scoreChanges: changes, clientId, createdBy: caller._id, createdAt: now, ...autoFields };
+    const scoreTotals = { ...room.scoreTotals };
+    for (const [id, delta] of Object.entries(changes)) {
+      const total = (scoreTotals[id] || 0) + delta;
+      if (!Number.isSafeInteger(total)) return invalid('累计分数过大，请核对');
+      scoreTotals[id] = total;
+    }
     await roundRef.set({ data: roundDoc });
     await callerRef.update({ data: { openid, lastSeenAt: now, isOnline: true } });
-    await roomRef.update({ data: { roundCount: roundDoc.roundIndex, lastActivityAt: now,
-      presenceAt: now, emptyAt: db.command.remove() } });
-    return { code: 'OK', data: { ...roundDoc, _id: roundId } };
+    const next = await changeRoom(transaction, roomId, room, { roundCount: roundDoc.roundIndex,
+      scoreTotals, totalsThroughIndex: roundDoc.roundIndex, ledgerEntryCount: (room.ledgerEntryCount || room.roundCount) + 1, lastActivityAt: now, presenceAt: now, nextCheckAt: now + CHECK_DELAY_MS,
+      emptyAt: db.command.remove() }, subscribers(players));
+    return { code: 'OK', data: { ...roundDoc, _id: roundId },
+      meta: { scoreTotals, throughRoundIndex: roundDoc.roundIndex, revision: next.revision } };
   });
 };

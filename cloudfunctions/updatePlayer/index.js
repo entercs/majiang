@@ -2,7 +2,8 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 // 文档不存在时返回 null，支持事务中的首次创建与旧记录兼容。
 const db = cloud.database({ throwOnNotFound: false });
-const { ownsPlayer } = require('./_shared/roomLifecycle');
+const { changeRoom, subscribers } = require('./_shared/roomSync');
+const { ownsPlayer, getAll } = require('./_shared/roomLifecycle');
 
 exports.main = async (event) => {
   const { OPENID: openid } = cloud.getWXContext();
@@ -30,13 +31,18 @@ exports.main = async (event) => {
     return { code: 'NOT_IN_ROOM', message: '只能修改自己的信息' };
   }
 
-  await db.collection('players').doc(playerId).update({
-    data: {
-      openid,
-      nickname: nickname.trim(),
-      avatarIndex,
-    },
+  const players = await getAll(db.collection('players').where({ roomId }).orderBy('_id', 'asc'));
+  return db.runTransaction(async tx => {
+    const playerRef = tx.collection('players').doc(playerId);
+    const player = (await playerRef.get()).data;
+    if (!player || player.roomId !== roomId || !ownsPlayer(player, openid, memberClientId)) {
+      return { code: 'NOT_IN_ROOM', message: '只能修改自己的信息' };
+    }
+    const room = (await tx.collection('rooms').doc(roomId).get()).data;
+    if (!room) return { code: 'ROOM_NOT_FOUND', message: '房间不存在' };
+    if (room.status !== 'active') return { code: 'ROOM_FINISHED', message: '本局已结束' };
+    await playerRef.update({ data: { openid, nickname: nickname.trim(), avatarIndex } });
+    await changeRoom(tx, roomId, room, {}, subscribers(players));
+    return { code: 'OK', data: { playerId, nickname: nickname.trim(), avatarIndex } };
   });
-
-  return { code: 'OK', data: { playerId, nickname: nickname.trim(), avatarIndex } };
 };

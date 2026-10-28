@@ -2,7 +2,7 @@
   <view class="code-bar">
     <text class="code-label">房间号</text>
     <text class="code-value" bind:tap="onCopyCode">{{roomCode}}</text>
-    <text class="share-btn" bind:tap="onOpenSharePopup">分享</text>
+    <text class="share-btn" bind:tap="onOpenSharePopup">邀请</text>
     <text class="leave-btn" bind:tap="onLeaveRoom">退出</text>
   </view>
 
@@ -63,6 +63,8 @@
     <view class="action-btn history" bind:tap="onShowHistory">历史记录</view>
   </view>
 
+  <view class="sync-bar" wx:if="{{scorePending}}" bindtap="onReconcileScore">有一笔给分待确认，点此核对</view>
+
   <!-- 同步状态条 -->
   <view class="sync-bar" wx:if="{{syncStatus !== 'connected'}}">
     <text>{{syncText}}</text>
@@ -88,19 +90,20 @@
     bind:editnick="onSelfEditNick"
   ></player-popup>
 
-  <!-- 分享二维码弹窗 -->
+  <!-- 邀请二维码弹窗 -->
   <view class="share-popup-mask" wx:if="{{sharePopupVisible}}" catch:tap="onCloseSharePopup">
     <view class="share-popup" catch:tap="noop">
       <view class="share-popup-title">邀请好友加入</view>
       <view class="share-popup-qrcode">
-        <image wx:if="{{shareQrCodeFileID}}"
-               class="qrcode-img"
-               src="{{shareQrCodeFileID}}"
+        <image wx:if="{{shareQrCodeSrc}}"
+               class="qrcode-img {{shareQrCodeReady ? '' : 'qrcode-pending'}}"
+               src="{{shareQrCodeSrc}}"
                mode="aspectFit"
+               bindload="onQrCodeLoaded"
                binderror="onQrCodeImageError"></image>
-        <view wx:elif="{{shareQrCodeLoading}}" class="qrcode-status">正在生成二维码...</view>
-        <view wx:else class="qrcode-failed">
-          <view class="qrcode-status">二维码生成失败</view>
+        <view wx:if="{{shareQrCodeLoading}}" class="qrcode-status qrcode-overlay">二维码加载中...</view>
+        <view wx:if="{{!shareQrCodeLoading && !shareQrCodeReady}}" class="qrcode-failed qrcode-overlay">
+          <view class="qrcode-status">二维码暂时不可用</view>
           <view class="qrcode-retry-btn" bind:tap="onRetryQRCode">重试</view>
         </view>
       </view>

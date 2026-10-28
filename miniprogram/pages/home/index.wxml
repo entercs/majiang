@@ -5,15 +5,6 @@
     <text class="title-underline"></text>
   </view>
 
-  <!-- 底分选择弹窗 -->
-  <base-score-popup
-    wx:if="{{baseScorePopupVisible}}"
-    initial-value="{{1}}"
-    auto-focus="{{true}}"
-    bind:confirm="onBaseScoreConfirm"
-    bind:cancel="onBaseScoreCancel"
-  ></base-score-popup>
-
   <!-- 用户信息卡片 -->
   <view class="profile" bindtap="onEditNickname">
     <image class="avatar" src="/images/avatars/avatar-{{avatarIndex || 0}}.png" mode="aspectFit"></image>

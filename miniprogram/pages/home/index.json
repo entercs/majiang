@@ -1,6 +1,4 @@
 {
   "navigationBarTitleText": "首页",
-  "usingComponents": {
-    "base-score-popup": "/components/base-score-popup/index"
-  }
+  "usingComponents": {}
 }

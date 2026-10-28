@@ -2,6 +2,7 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 // 文档不存在时返回 null，支持事务中的首次创建与旧记录兼容。
 const db = cloud.database({ throwOnNotFound: false });
+const { changeRoom, subscribers, CHECK_DELAY_MS } = require('./_shared/roomSync');
 const { ownsPlayer, isOnline, getAll } = require('./_shared/roomLifecycle');
 
 exports.main = async (event) => {
@@ -27,7 +28,8 @@ exports.main = async (event) => {
       if (fresh && isOnline(fresh, now)) onlineCount++;
     }
     // emptyAt 只是候选时间，关闭前还须复核最近心跳，不能仅凭标记关房。
-    await roomRef.update({ data: { emptyAt: onlineCount ? db.command.remove() : now } });
+    await changeRoom(transaction, roomId, room, { emptyAt: onlineCount ? db.command.remove() : now,
+      nextCheckAt: now + (onlineCount ? CHECK_DELAY_MS : 300000) }, subscribers(players));
     return { code: 'OK', data: { onlineCount } };
   });
 };

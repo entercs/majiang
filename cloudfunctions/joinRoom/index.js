@@ -3,6 +3,7 @@ const { createHash } = require('crypto');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 // 文档不存在时返回 null，支持事务中的首次创建与旧记录兼容。
 const db = cloud.database({ throwOnNotFound: false });
+const { changeRoom, subscribers, CHECK_DELAY_MS } = require('./_shared/roomSync');
 const { ownsPlayer, getAll } = require('./_shared/roomLifecycle');
 const NAMES = ['东风', '南风', '西风', '北风', '红中', '白板', '发财'];
 
@@ -51,8 +52,10 @@ exports.main = async (event) => {
       nickname: nicknameAuto === false ? nickname.trim() : current ? current.nickname : NAMES[assignedAvatar] };
     if (current) await playerRef.update({ data });
     else await playerRef.set({ data: { ...data, isOwner: false, seatIndex: ids.length } });
-    await roomRef.update({ data: { playerIds: [...new Set([...ids, playerId])],
-      presenceAt: now, emptyAt: db.command.remove() } });
+    const members = new Map((room.subscribers || subscribers(players)).map(m => [m.playerId, m]));
+    members.set(playerId, { playerId, openid });
+    await changeRoom(transaction, roomId, room, { playerIds: [...new Set([...ids, playerId])],
+      presenceAt: now, nextCheckAt: now + CHECK_DELAY_MS, emptyAt: db.command.remove() }, [...members.values()]);
     return { code: 'OK', data: { roomId, playerId, ruleId: room.ruleId,
       isRejoin: !!current, seatIndex: current ? current.seatIndex : ids.length } };
   });

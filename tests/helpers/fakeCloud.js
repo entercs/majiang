@@ -3,15 +3,19 @@ function makeCloud(initial = {}, openid = 'wx-a') {
   let tables = structuredClone(initial);
   let tail = Promise.resolve();
   let nextId = 0;
+  const calls = [];
   const command = {
     gt: value => ({ op: 'gt', value }), lte: value => ({ op: 'lte', value }),
+    exists: value => ({ op: 'exists', value }), and: value => ({ op: 'and', value }),
     in: value => ({ op: 'in', value }), or: value => ({ op: 'or', value }),
     remove: () => ({ op: 'remove' }),
   };
   function matches(row, query) {
+    if (query.op === 'and') return query.value.every(q => matches(row, q));
     if (query.op === 'or') return query.value.some(q => matches(row, q));
     return Object.entries(query).every(([key, expected]) => {
       if (expected && expected.op) {
+        if (expected.op === 'exists') return Object.prototype.hasOwnProperty.call(row, key) === expected.value;
         if (expected.op === 'gt') return row[key] > expected.value;
         if (expected.op === 'lte') return row[key] <= expected.value;
         if (expected.op === 'in') return expected.value.includes(row[key]);
@@ -29,6 +33,7 @@ function makeCloud(initial = {}, openid = 'wx-a') {
           limit: n => query(filter, sorting, offset, n),
           field: () => api,
           async get() {
+            calls.push({ collection: name, method: 'query', size, filter });
             let rows = (readTables()[name] || []).filter(r => matches(r, filter));
             rows = [...rows].sort((a, b) => {
               for (const [key, dir] of sorting) {
@@ -43,17 +48,20 @@ function makeCloud(initial = {}, openid = 'wx-a') {
           doc(id) {
             return {
               async get() {
+                calls.push({ collection: name, method: 'get', id });
                 const doc = (readTables()[name] || []).find(r => r._id === id);
                 if (!doc && throwOnNotFound) throw new Error('document.get:fail document with _id ' + id + ' does not exist');
                 return { data: structuredClone(doc || null) };
               },
               async set({ data }) {
+                calls.push({ collection: name, method: 'set', id });
                 const table = readTables()[name] ||= [];
                 const index = table.findIndex(r => r._id === id);
                 const doc = { ...structuredClone(data), _id: id };
                 if (index < 0) table.push(doc); else table[index] = doc;
               },
               async update({ data }) {
+                calls.push({ collection: name, method: 'update', id });
                 const doc = (readTables()[name] || []).find(r => r._id === id);
                 if (!doc) throw new Error('missing document');
                 for (const [key, value] of Object.entries(data)) {
@@ -97,6 +105,7 @@ function makeCloud(initial = {}, openid = 'wx-a') {
     database: getDatabase, deleteFile: jest.fn(async () => ({})),
     openapi: { wxacode: { get: jest.fn(async () => ({ buffer: Buffer.from('qr') })) } },
     uploadFile: jest.fn(async () => ({ fileID: 'cloud://qr' })),
+    calls,
     rows: name => structuredClone(tables[name] || []),
     setOpenid: value => { openid = value; },
   };

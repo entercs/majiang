@@ -1,4 +1,4 @@
-const ONLINE_TTL_MS = 90 * 1000;
+const ONLINE_TTL_MS = 180 * 1000;
 const EMPTY_TIMEOUT_MS = 5 * 60 * 1000;
 const INACTIVE_TIMEOUT_MS = 30 * 60 * 1000;
 

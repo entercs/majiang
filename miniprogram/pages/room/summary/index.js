@@ -37,11 +37,11 @@ Page({
   // 来自云端（首页"已结束"直接查看战绩）
   _loadFromCloud(roomId) {
     const roomService = require('../../../services/roomService');
-    roomService.getRoomSnapshot(roomId).then(({ players, rounds }) => {
+    roomService.getRoomState(roomId, { summaryOnly: true }).then(({ players, rounds, scoreTotals }) => {
       // 算总分
-      const totals = {};
-      players.forEach(p => { totals[p._id] = 0; });
-      rounds.forEach(r => {
+      const totals = { ...(scoreTotals || {}) };
+      players.forEach(p => { if (!(p._id in totals)) totals[p._id] = 0; });
+      (scoreTotals ? [] : rounds).forEach(r => {
         Object.entries(r.scoreChanges || {}).forEach(([pid, delta]) => {
           totals[pid] = (totals[pid] || 0) + Number(delta || 0);
         });

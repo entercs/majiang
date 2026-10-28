@@ -9,6 +9,8 @@ const { getDefaultRule } = require('./_shared/ruleService');
 const { ROOM_STATUS } = require('./_shared/constants');
 const { generateRoomQRCode } = require('./_shared/qrCodeService');
 
+const { subscribers, writeFeed, policy, CHECK_DELAY_MS } = require('./_shared/roomSync');
+
 const RATE_LIMIT_MS = 10 * 1000;        // 同一 clientId 10s 内只能创建 1 次
 exports.main = async (event, context) => {
   const { OPENID: openid } = cloud.getWXContext();
@@ -35,22 +37,10 @@ exports.main = async (event, context) => {
   const assignedAvatar = isManual ? avatarIndex : Math.floor(Math.random() * 7);
   const assignedNickname = isManual ? nickname.trim() : NAMES[assignedAvatar];
 
-  // 创建频率限制，保留历史玩家和战绩。
-  if (clientId) {
-    // 10s 内只能 1 次
-    const recentRes = await db.collection('players')
-      .where({ clientId, isOwner: true })
-      .orderBy('joinedAt', 'desc')
-      .limit(1)
-      .get();
-    if (recentRes.data.length > 0) {
-      const lastCreateAt = recentRes.data[0].joinedAt;
-      if (Date.now() - lastCreateAt < RATE_LIMIT_MS) {
-        const wait = Math.ceil((RATE_LIMIT_MS - (Date.now() - lastCreateAt)) / 1000);
-        return { code: 'RATE_LIMIT', message: `操作太频繁，请 ${wait} 秒后再试`, detail: 'createRoom' };
-      }
-    }
-
+  const limitId = 'create_' + createHash('sha256').update(openid).digest('hex').slice(0, 32);
+  const lastLimit = (await db.collection('requestLimits').doc(limitId).get()).data;
+  if (lastLimit && Date.now() - lastLimit.createdAt < RATE_LIMIT_MS) {
+    return { code: 'RATE_LIMIT', message: '操作太频繁，请稍后再创建' };
   }
 
   try {
@@ -66,15 +56,23 @@ exports.main = async (event, context) => {
         const roomRef = transaction.collection('rooms').doc(roomId);
         if ((await roomRef.get()).data) return false;
         const now = Date.now();
+        const limitRef = transaction.collection('requestLimits').doc(limitId);
+        const limit = (await limitRef.get()).data;
+        if (limit && now - limit.createdAt < RATE_LIMIT_MS) return 'limited';
+        await limitRef.set({ data: { createdAt: now } });
         await transaction.collection('rules').doc(ruleId).set({ data: { ...defaultRule, roomId, createdAt: now } });
         await transaction.collection('players').doc(playerId).set({ data: {
           roomId, nickname: assignedNickname, avatarIndex: assignedAvatar, seatIndex: 0,
           isOwner: true, openid, clientId, joinedAt: now, isOnline: true, lastSeenAt: now,
         } });
         await roomRef.set({ data: { roomCode, ownerId: openid, status: ROOM_STATUS.ACTIVE,
-          ruleId, playerIds: [playerId], createdAt: now, presenceAt: now, roundCount: 0 } });
+          ruleId, playerIds: [playerId], createdAt: now, presenceAt: now, roundCount: 0,
+          ledgerSchema: 1, totalsThroughIndex: 0, ledgerEntryCount: 0, scoreTotals: { [playerId]: 0 }, revision: 1, nextCheckAt: now + CHECK_DELAY_MS,
+          subscribers: [{ playerId, openid }] } });
+        if (policy().mode === 'watch') await writeFeed(transaction, roomId, { revision: 1, roundCount: 0, status: 'active' }, { playerId, openid });
         return true;
       });
+      if (created === 'limited') return { code: 'RATE_LIMIT', message: '操作太频繁，请稍后再创建' };
       if (!created) continue;
       const qrCodeFileID = await generateRoomQRCode(roomId, roomCode);
       return { code: 'OK', data: { roomId, roomCode, playerId, ruleId, qrCodeFileID } };
